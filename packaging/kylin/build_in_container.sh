@@ -8,6 +8,8 @@ venv="/tmp/wxdoc-venv"
 python_version="3.12.13"
 python_prefix="/tmp/cpython-shared"
 python_bin="$python_prefix/bin/python3.12"
+libffi_version="3.4.6"
+libffi_prefix="/tmp/libffi"
 bootstrap_python="/opt/python/cp312-cp312/bin/python"
 wheelhouse="/tmp/wheelhouse"
 
@@ -22,10 +24,26 @@ mkdir -p "$wheelhouse"
   "pyinstaller==6.21.0" \
   "pytest==9.1.1"
 curl --fail --location --retry 3 \
+  "https://github.com/libffi/libffi/releases/download/v$libffi_version/libffi-$libffi_version.tar.gz" \
+  --output "/tmp/libffi-$libffi_version.tar.gz"
+tar -C /tmp -xzf "/tmp/libffi-$libffi_version.tar.gz"
+cd "/tmp/libffi-$libffi_version"
+./configure \
+  --prefix="$libffi_prefix" \
+  --disable-shared \
+  --enable-static \
+  --with-pic
+make -j"$(getconf _NPROCESSORS_ONLN)"
+make install
+
+curl --fail --location --retry 3 \
   "https://www.python.org/ftp/python/$python_version/Python-$python_version.tgz" \
   --output "/tmp/Python-$python_version.tgz"
 tar -C /tmp -xzf "/tmp/Python-$python_version.tgz"
 cd "/tmp/Python-$python_version"
+export PKG_CONFIG_PATH="$libffi_prefix/lib/pkgconfig"
+export LIBFFI_CFLAGS="-I$libffi_prefix/include"
+export LIBFFI_LIBS="$libffi_prefix/lib/libffi.a"
 ./configure \
   --prefix="$python_prefix" \
   --enable-shared \
