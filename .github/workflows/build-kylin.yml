@@ -10,7 +10,7 @@ jobs:
   kylin-x86_64:
     runs-on: [self-hosted, linux, x64, kylin-v10]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: python3 -m venv .venv
       - run: .venv/bin/python -m pip install -e ".[test,build]"
       - run: .venv/bin/pytest
@@ -18,7 +18,7 @@ jobs:
       - run: cp packaging/kylin/start.sh dist/start.sh
       - run: cp packaging/kylin/WXDocFormat.desktop dist/WXDocFormat.desktop
       - run: tar -C dist -czf wx-doc-format-kylin-v10-x86_64.tar.gz WXDocFormat start.sh WXDocFormat.desktop
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wx-doc-format-kylin-v10-x86_64
           path: wx-doc-format-kylin-v10-x86_64.tar.gz
@@ -26,7 +26,7 @@ jobs:
   kylin-arm64:
     runs-on: [self-hosted, linux, ARM64, kylin-v10]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: python3 -m venv .venv
       - run: .venv/bin/python -m pip install -e ".[test,build]"
       - run: .venv/bin/pytest
@@ -34,7 +34,7 @@ jobs:
       - run: cp packaging/kylin/start.sh dist/start.sh
       - run: cp packaging/kylin/WXDocFormat.desktop dist/WXDocFormat.desktop
       - run: tar -C dist -czf wx-doc-format-kylin-v10-arm64.tar.gz WXDocFormat start.sh WXDocFormat.desktop
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wx-doc-format-kylin-v10-arm64
           path: wx-doc-format-kylin-v10-arm64.tar.gz
