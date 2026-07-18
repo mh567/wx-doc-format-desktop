@@ -1,0 +1,7 @@
+WX Doc Format Desktop includes or depends on the following projects:
+
+* python-docx, MIT License
+* lxml, BSD-3-Clause License
+* PyInstaller, GPL-2.0-or-later with the PyInstaller bootloader exception, build-time only
+
+See each dependency distribution for its complete license text and copyright notices.

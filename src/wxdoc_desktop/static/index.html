@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WX 文档格式转换</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">WX</div>
+      <div>
+        <strong>WX 文档格式</strong>
+        <span>本地离线转换</span>
+      </div>
+      <button class="quiet-button" id="shutdownButton" type="button">退出程序</button>
+    </header>
+
+    <main class="workspace">
+      <section class="intro">
+        <p class="eyebrow">固定 WX 模板</p>
+        <h1>把文档放进来，<br>格式整理交给本机。</h1>
+        <p class="lead">DOCX 和 Markdown 文件只在当前电脑上处理。转换完成后，你会同时得到 WX 文档和复核报告。</p>
+        <dl class="privacy-list">
+          <div><dt>外部传输</dt><dd>无</dd></div>
+          <div><dt>额外配置</dt><dd>无</dd></div>
+          <div><dt>支持格式</dt><dd>DOCX / MD</dd></div>
+        </dl>
+      </section>
+
+      <section class="converter" aria-labelledby="converterTitle">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">01 选择文件</p>
+            <h2 id="converterTitle">开始转换</h2>
+          </div>
+          <span class="connection" id="connectionStatus">正在检查本地服务</span>
+        </div>
+
+        <label class="dropzone" id="dropzone" for="fileInput">
+          <input id="fileInput" type="file" accept=".docx,.md,.markdown" multiple>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
+          <strong>拖放文件到这里</strong>
+          <span>或点击选择，可以一次处理多个文件</span>
+        </label>
+
+        <div class="queue-header" id="queueHeader" hidden>
+          <span id="queueSummary"></span>
+          <button class="text-button" id="clearButton" type="button">清空列表</button>
+        </div>
+        <ol class="queue" id="queue" aria-live="polite"></ol>
+        <button class="primary-button" id="convertButton" type="button" disabled>
+          <span>开始转换</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+        </button>
+      </section>
+    </main>
+
+    <footer>
+      <span id="versionText">正在读取版本</span>
+      <span>文档内容不会记入日志</span>
+    </footer>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

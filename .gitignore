@@ -1,0 +1,12 @@
+.DS_Store
+.pytest_cache/
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+*.dmg
+*.zip
+*.tar.gz
+environment-report.json

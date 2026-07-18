@@ -1,0 +1,85 @@
+{
+  "modules": {
+    "audit.py": {
+      "upstream_sha256": "9f0763dbdf1de245f95f7dabba37f608d9cf5a506bec2108b7be3ee2798c7178",
+      "vendored_sha256": "9e61b48e62ba6a95a92fbce50baebb034783b18bd74687a93eb9f0356a108ea3"
+    },
+    "caption_placement.py": {
+      "upstream_sha256": "354039c8255aaddfcf7174c973b56178821a08e6579ed609eec3d6bceffeea43",
+      "vendored_sha256": "a77ea2ca3fc7d51d207fe3e2560973df74697e64f104edae8ee4fcefffc093fc"
+    },
+    "document_model.py": {
+      "upstream_sha256": "91719212e6997c3fef3dddfd3e53078058c8bb178b1b786ec764671c911bad1a",
+      "vendored_sha256": "91719212e6997c3fef3dddfd3e53078058c8bb178b1b786ec764671c911bad1a"
+    },
+    "docx_pipeline.py": {
+      "upstream_sha256": "d7f649957e29d21ce75d6a2b7287050beba80d60343896e59334597e0ce5ed4f",
+      "vendored_sha256": "c3274c5d3397fd5f85161eb1d9ac4928e3eb2bb0a1d0f0159d5215bfce0f284c"
+    },
+    "docx_render.py": {
+      "upstream_sha256": "d81de9413e8ba8d5a1116c9e2500e91d3e1ecc178e219a9b636f0bd9a30535e1",
+      "vendored_sha256": "c3872785d40fc55cdb32ec897ef160a873897d9576551d9f867c70c312e572db"
+    },
+    "fallback_styles.py": {
+      "upstream_sha256": "86a256f1d575162de3daad7f7a374a0f9ee7e395c80ce487433877ea218b679c",
+      "vendored_sha256": "86a256f1d575162de3daad7f7a374a0f9ee7e395c80ce487433877ea218b679c"
+    },
+    "front_matter.py": {
+      "upstream_sha256": "6f368769ade3241dcc478f768485b8e615b05a830a36c2289489a042e01ca3e9",
+      "vendored_sha256": "c630b220ea9a73ebc7ca5c4a475d217a22752741970c7d36b0dd5da019fcd36e"
+    },
+    "list_detector.py": {
+      "upstream_sha256": "5d626847ad3beeecd2132d1c7d2ead22651b7cda5cdb68eca4fdcf303342b159",
+      "vendored_sha256": "8580e0652aac94b0b6e392ab1498cb0e0020a65d51f7093e5d30ddd90156a429"
+    },
+    "list_style_mapping.py": {
+      "upstream_sha256": "05a9215bdbd00fc35a6381ab54debc37cdc497ec62cd298f7023eed502c46e4c",
+      "vendored_sha256": "05a9215bdbd00fc35a6381ab54debc37cdc497ec62cd298f7023eed502c46e4c"
+    },
+    "md_pipeline.py": {
+      "upstream_sha256": "312f700203006d8a173e01329ec7fbfb555f0875792a873770b04fb401d71f36",
+      "vendored_sha256": "bae6b271df8c2d9cfab8fb5a29a939274651436d4ca5c314473a3b588136730b"
+    },
+    "model_normalization.py": {
+      "upstream_sha256": "e5b6a9db7299097957e245519a206cba41afdd3d48fdfc93c5fa5dabfa092b73",
+      "vendored_sha256": "c8b60a4b5ca8b043a3bcf4e2ea625d74656c6d730edd0e20fee9215afe25fff7"
+    },
+    "reporting.py": {
+      "upstream_sha256": "512bbc214b6db43b6d068bf97f3ea140e8f583498fafa81fdfd342ae82b3096f",
+      "vendored_sha256": "512bbc214b6db43b6d068bf97f3ea140e8f583498fafa81fdfd342ae82b3096f"
+    },
+    "table_formatting.py": {
+      "upstream_sha256": "4fcba7ebdb4f1f2cacf64fb15607553ab124fc9d74fed48318a92da461c09ce1",
+      "vendored_sha256": "4fcba7ebdb4f1f2cacf64fb15607553ab124fc9d74fed48318a92da461c09ce1"
+    },
+    "table_semantics.py": {
+      "upstream_sha256": "d88444a080f95086f3000b8e031cd9c7c9c521812c089a5625cb66029f69bb06",
+      "vendored_sha256": "d88444a080f95086f3000b8e031cd9c7c9c521812c089a5625cb66029f69bb06"
+    },
+    "template_finalizer.py": {
+      "upstream_sha256": "d559791646361c69d9f3d0d13ea115a5f11af0a6cedf96ae9e1223f53ce0a1c2",
+      "vendored_sha256": "5809bfd8058ba162838f97cad605b3beaea2677dc4a6ae12d592bab242fc0191"
+    },
+    "template_profile.py": {
+      "upstream_sha256": "6e1febd3db45a9ca9cc713707b3294fba3d4b30cac45c25ba31fa82c400983a1",
+      "vendored_sha256": "6e1febd3db45a9ca9cc713707b3294fba3d4b30cac45c25ba31fa82c400983a1"
+    },
+    "text_utils.py": {
+      "upstream_sha256": "6147bef386e07d172664379eacf63a928c7512880c44b389e2dae2f92269b758",
+      "vendored_sha256": "05833979f08c6273911b91cdbbc40ca92b75bdc2cf93edc23dba341131f840d8"
+    },
+    "toc_detector.py": {
+      "upstream_sha256": "4cba7cfe3408a694e9f997047578e2c0a4f26dbdae2dc403bd201b208430e4c1",
+      "vendored_sha256": "4cba7cfe3408a694e9f997047578e2c0a4f26dbdae2dc403bd201b208430e4c1"
+    },
+    "word_model_renderer.py": {
+      "upstream_sha256": "177f5a3d580c3d4d601fbc6f9d1ca0f7a660aef9f3050c7e804a85c4ae529d04",
+      "vendored_sha256": "a06a542bdb273421fc7da08a81dc52f9adab2eda9bed49aa3f34883e14415ec7"
+    }
+  },
+  "template": {
+    "path": "src/wxdoc_desktop/assets/wx_template.docx",
+    "sha256": "3da91436d40dcd3cbfd1d5b1d38321c94785611dc78974aff4831e158fabfce5"
+  },
+  "upstream_version": "0.12.7"
+}

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=WX 文档格式
+Comment=本地离线转换 DOCX 和 Markdown
+Exec=sh -c '"$(dirname "%k")/start.sh"'
+Terminal=false
+Categories=Office;
