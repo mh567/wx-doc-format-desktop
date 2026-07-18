@@ -5,8 +5,12 @@ import pytest
 from docx import Document
 
 from wxdoc_desktop.environment import environment_report
+from wxdoc_desktop import __version__
 from wxdoc_desktop.resources import template_sha256, verified_template
 from wxdoc_desktop.service import ConversionError, validate_input
+
+
+ROOT = Path(__file__).parents[1]
 
 
 def test_embedded_template_is_verified():
@@ -27,9 +31,12 @@ def test_embedded_template_has_no_personal_or_custom_metadata():
 
 
 def test_environment_report_has_no_document_content():
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     report = environment_report()
     assert report["template_verified"] is True
-    assert report["engine_version"] == "0.12.7"
+    assert report["engine_version"] == version
+    assert report["application_version"] == version
+    assert __version__ == version
     assert "documents" not in report
 
 

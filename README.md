@@ -1,6 +1,6 @@
 # WX 文档格式桌面版
 
-这是一个纯离线的 WX 文档格式转换程序。文档在当前电脑上完成解析、规范化、模板渲染和审计，运行时不访问外网。
+WX 文档格式桌面版用于在本机完成 DOCX、Markdown 文档的解析、规范化、模板渲染和审计。
 
 ## 首发平台
 
@@ -11,7 +11,7 @@
 
 ## 使用
 
-发布包用户双击启动程序，浏览器会自动打开本地操作页面。选择或拖放 DOCX、Markdown 文件即可批量转换。
+从 [GitHub Releases](https://github.com/mh567/wx-doc-format-desktop/releases) 下载对应系统的发布包。解压后启动程序，浏览器会自动打开本地操作页面。选择或拖放 DOCX、Markdown 文件即可批量转换。
 
 源码运行：
 
@@ -40,10 +40,6 @@ wx-doc-format env --output environment-report.json
 
 报告分为已完成、已完成且建议复核、转换失败三类状态。
 
-## 架构边界
-
-`wxdoc_core` 只包含确定性规则。引擎通过 `tools/sync_upstream.py` 从 `wx-doc-format-skill` 的指定版本允许列表导出。应用不包含 LLM、Agent、API Key、远程更新和命令桥接。
-
 ## 已知边界
 
 - 文本框、形状、SmartArt、批注和修订记录可能需要人工复核。
@@ -58,12 +54,17 @@ pytest
 python packaging/build.py
 ```
 
-上游同步：
+## 版本与同步
+
+桌面应用版本与 `wx-doc-format-skill` 的 `VERSION` 保持一致。更新 Skill 后，在桌面版仓库执行：
 
 ```bash
 python tools/sync_upstream.py --source /path/to/wx-doc-format-skill
+python tools/check_release.py
 pytest
 ```
+
+同步命令会更新确定性核心、内置模板、应用版本、规则版本和文件哈希清单。推送同版本标签后，GitHub Actions 会构建四个平台发布包并汇总到同一个 Release。
 
 ## 许可
 

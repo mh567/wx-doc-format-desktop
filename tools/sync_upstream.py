@@ -51,6 +51,8 @@ CORE_PROPERTY_NAMES = {
     "revision",
 }
 
+VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -138,7 +140,15 @@ def main() -> None:
         }
 
     version = (source / "VERSION").read_text(encoding="utf-8").strip()
+    if not VERSION_PATTERN.fullmatch(version):
+        raise SystemExit(f"Invalid upstream VERSION: {version!r}")
+    (destination / "VERSION").write_text(version + "\n", encoding="utf-8")
     (core_dir / "engine_version.txt").write_text(version + "\n", encoding="utf-8")
+    (destination / "src" / "wxdoc_desktop" / "_version.py").write_text(
+        '"""Generated from the upstream Skill VERSION file."""\n\n'
+        f'__version__ = "{version}"\n',
+        encoding="utf-8",
+    )
 
     source_template = source / "assets" / "wx_template.docx"
     target_template = asset_dir / "wx_template.docx"
