@@ -14,3 +14,11 @@ def test_runtime_has_no_remote_update_client():
     combined = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "src" / "wxdoc_desktop").glob("*.py"))
     banned = ("requests.get", "urllib.request", "httpx", "socket.create_connection", "subprocess.run")
     assert all(token not in combined for token in banned)
+
+
+def test_frontend_uses_magic_format_single_workspace():
+    html = (ROOT / "src" / "wxdoc_desktop" / "static" / "index.html").read_text(encoding="utf-8")
+    assert "Magic Format" in html
+    assert 'class="intro"' not in html
+    assert html.count('class="converter"') == 1
+    assert "支持 DOCX、MD 和 MARKDOWN" in html
