@@ -41,9 +41,10 @@ curl --fail --location --retry 3 \
   --output "/tmp/Python-$python_version.tgz"
 tar -C /tmp -xzf "/tmp/Python-$python_version.tgz"
 cd "/tmp/Python-$python_version"
-export PKG_CONFIG_PATH="$libffi_prefix/lib/pkgconfig"
-export LIBFFI_CFLAGS="-I$libffi_prefix/include"
-export LIBFFI_LIBS="$libffi_prefix/lib/libffi.a"
+export PKG_CONFIG_PATH="$libffi_prefix/lib64/pkgconfig:$libffi_prefix/lib/pkgconfig"
+pkg-config --exists libffi
+export LIBFFI_CFLAGS="$(pkg-config --cflags libffi)"
+export LIBFFI_LIBS="$(pkg-config --libs --static libffi)"
 ./configure \
   --prefix="$python_prefix" \
   --enable-shared \
