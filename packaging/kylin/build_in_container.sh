@@ -54,6 +54,7 @@ make install
 export LD_LIBRARY_PATH="$python_prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export PIP_NO_INDEX=1
 export PIP_FIND_LINKS="$wheelhouse"
+cd "$root"
 
 "$python_bin" -m venv "$venv"
 "$venv/bin/python" -m pip install -e "$root[test,build]"
