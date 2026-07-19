@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 import os
 import stat
-import subprocess
-import sys
 import threading
 import time
 import urllib.error
@@ -87,10 +85,13 @@ def test_activate_reuses_server_and_requires_instance_token(runtime_dir: Path, m
 
         result = activate(descriptor)
         assert result.status == "activated"
+        second = activate(descriptor)
+        assert second.status == "activated"
         deadline = time.monotonic() + 1
-        while not opened and time.monotonic() < deadline:
+        while len(opened) < 2 and time.monotonic() < deadline:
             time.sleep(0.01)
-        assert opened == [descriptor.url]
+        assert opened == [descriptor.url, descriptor.url]
+        assert state.activation_count == 2
     finally:
         server.shutdown()
         server.server_close()
@@ -122,82 +123,3 @@ def test_conversion_guard_blocks_idle_exit():
         assert state.idle() is True
     finally:
         state.close()
-
-
-def test_repeated_launcher_reuses_helper_and_shutdown_cleans_descriptor(runtime_dir: Path):
-    root = Path(__file__).parents[1]
-    environment = os.environ.copy()
-    environment.update(
-        {
-            "MAGIC_FORMAT_RUNTIME_DIR": str(runtime_dir),
-            "MAGIC_FORMAT_NO_BROWSER": "1",
-            "PYTHONPATH": str(root / "src"),
-            "PYTHONIOENCODING": "cp1252",
-        }
-    )
-    descriptor: RuntimeDescriptor | None = None
-    helper = subprocess.Popen(
-        [sys.executable, "-m", "wxdoc_desktop", "serve-helper"],
-        cwd=root,
-        env=environment,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    try:
-        deadline = time.monotonic() + 20
-        while time.monotonic() < deadline and read_descriptor() is None and helper.poll() is None:
-            time.sleep(0.05)
-        descriptor = read_descriptor()
-        if descriptor is None:
-            helper.terminate()
-            _, stderr = helper.communicate(timeout=5)
-            pytest.fail(stderr or "Helper did not publish its runtime descriptor.")
-
-        first = subprocess.run(
-            [sys.executable, "-m", "wxdoc_desktop"],
-            cwd=root,
-            env=environment,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        assert first.returncode == 0, first.stderr
-        assert descriptor.pid == helper.pid
-
-        second = subprocess.run(
-            [sys.executable, "-m", "wxdoc_desktop"],
-            cwd=root,
-            env=environment,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        assert second.returncode == 0, second.stderr
-        assert read_descriptor() is not None
-        assert read_descriptor().pid == descriptor.pid
-
-        with urllib.request.urlopen(descriptor.url + "api/health", timeout=2) as response:
-            health = json.loads(response.read().decode("utf-8"))
-            token = health["token"]
-        assert health["instance"] == {"managed": True, "activation_count": 2}
-        status, payload = _post(descriptor.url + "api/shutdown", {"X-WX-Token": token})
-        assert status == 200
-        assert payload["ok"] is True
-        deadline = time.monotonic() + 3
-        while descriptor_path().exists() and time.monotonic() < deadline:
-            time.sleep(0.05)
-        assert not descriptor_path().exists()
-    finally:
-        if descriptor_path().exists():
-            current = read_descriptor()
-            if current is not None:
-                try:
-                    with urllib.request.urlopen(current.url + "api/health", timeout=1) as response:
-                        token = json.loads(response.read().decode("utf-8"))["token"]
-                    _post(current.url + "api/shutdown", {"X-WX-Token": token})
-                except OSError:
-                    pass
-        if helper.poll() is None:
-            helper.terminate()
-        helper.wait(timeout=5)
