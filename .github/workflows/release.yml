@@ -41,6 +41,7 @@ jobs:
       - run: pytest
       - run: python tools/check_release.py --tag "$GITHUB_REF_NAME"
       - run: python packaging/build.py
+      - run: python tools/smoke_package.py
       - if: runner.os == 'macOS'
         run: ditto -c -k --sequesterRsrc --keepParent dist/MagicFormat.app "wx-doc-format-${{ steps.version.outputs.value }}-${{ matrix.platform }}.zip"
       - if: runner.os == 'Windows'

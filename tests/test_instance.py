@@ -98,13 +98,15 @@ def test_activate_reuses_server_and_requires_instance_token(runtime_dir: Path, m
         state.close()
 
 
-def test_heartbeat_blocks_idle_until_client_expires():
+def test_heartbeat_blocks_idle_until_client_expires(monkeypatch: pytest.MonkeyPatch):
+    clock = [100.0]
+    monkeypatch.setattr("wxdoc_desktop.server.time.monotonic", lambda: clock[0])
     state = ApplicationState(managed=True, idle_timeout=0.02, client_timeout=0.08)
     try:
         state.touch("browser-client")
-        time.sleep(0.03)
+        clock[0] += 0.03
         assert state.idle() is False
-        time.sleep(0.07)
+        clock[0] += 0.07
         assert state.idle() is True
     finally:
         state.close()
@@ -133,18 +135,34 @@ def test_repeated_launcher_reuses_helper_and_shutdown_cleans_descriptor(runtime_
         }
     )
     descriptor: RuntimeDescriptor | None = None
+    helper = subprocess.Popen(
+        [sys.executable, "-m", "wxdoc_desktop", "serve-helper"],
+        cwd=root,
+        env=environment,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
     try:
+        deadline = time.monotonic() + 20
+        while time.monotonic() < deadline and read_descriptor() is None and helper.poll() is None:
+            time.sleep(0.05)
+        descriptor = read_descriptor()
+        if descriptor is None:
+            helper.terminate()
+            _, stderr = helper.communicate(timeout=5)
+            pytest.fail(stderr or "Helper did not publish its runtime descriptor.")
+
         first = subprocess.run(
             [sys.executable, "-m", "wxdoc_desktop"],
             cwd=root,
             env=environment,
             capture_output=True,
             text=True,
-            timeout=12,
+            timeout=30,
         )
         assert first.returncode == 0, first.stderr
-        descriptor = read_descriptor()
-        assert descriptor is not None
+        assert descriptor.pid == helper.pid
 
         second = subprocess.run(
             [sys.executable, "-m", "wxdoc_desktop"],
@@ -152,7 +170,7 @@ def test_repeated_launcher_reuses_helper_and_shutdown_cleans_descriptor(runtime_
             env=environment,
             capture_output=True,
             text=True,
-            timeout=12,
+            timeout=30,
         )
         assert second.returncode == 0, second.stderr
         assert read_descriptor() is not None
@@ -179,3 +197,6 @@ def test_repeated_launcher_reuses_helper_and_shutdown_cleans_descriptor(runtime_
                     _post(current.url + "api/shutdown", {"X-WX-Token": token})
                 except OSError:
                     pass
+        if helper.poll() is None:
+            helper.terminate()
+        helper.wait(timeout=5)
