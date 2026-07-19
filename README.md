@@ -1,6 +1,6 @@
-# WX 文档格式桌面版
+# Magic Format
 
-WX 文档格式桌面版用于在本机完成 DOCX、Markdown 文档的解析、规范化、模板渲染和审计。
+Magic Format 用于在本机完成 DOCX、Markdown 文档的解析、规范化、模板渲染和审计。
 
 ## 首发平台
 

@@ -63,6 +63,6 @@ cd "$root"
 "$venv/bin/python" "$root/packaging/build.py"
 
 cp "$root/packaging/kylin/start.sh" "$root/dist/start.sh"
-cp "$root/packaging/kylin/WXDocFormat.desktop" "$root/dist/WXDocFormat.desktop"
+cp "$root/packaging/kylin/MagicFormat.desktop" "$root/dist/MagicFormat.desktop"
 tar -C "$root/dist" -czf "$root/wx-doc-format-$version-kylin-v10-$architecture.tar.gz" \
-  WXDocFormat start.sh WXDocFormat.desktop
+  MagicFormat start.sh MagicFormat.desktop

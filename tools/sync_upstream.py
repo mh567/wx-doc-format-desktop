@@ -21,6 +21,7 @@ MODULES = (
     "fallback_styles",
     "front_matter",
     "list_detector",
+    "list_group_detection",
     "list_style_mapping",
     "md_pipeline",
     "model_normalization",
@@ -31,6 +32,7 @@ MODULES = (
     "template_profile",
     "text_utils",
     "toc_detector",
+    "unordered_lists",
     "word_model_renderer",
 )
 

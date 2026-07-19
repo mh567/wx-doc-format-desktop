@@ -1,4 +1,10 @@
-const state = { token: "", files: [], running: false };
+const state = {
+  token: "",
+  files: [],
+  running: false,
+  clientId: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  heartbeatTimer: null
+};
 const fileInput = document.querySelector("#fileInput");
 const dropzone = document.querySelector("#dropzone");
 const queue = document.querySelector("#queue");
@@ -37,6 +43,7 @@ function render() {
   queueHeader.hidden = state.files.length === 0;
   queueSummary.textContent = state.files.length ? `已选择 ${state.files.length} 个文件` : "";
   convertButton.disabled = state.running || !state.token || !state.files.some(item => item.status === "waiting" || item.status === "failed");
+  shutdownButton.disabled = state.running;
   convertButton.querySelector("span").textContent = state.running ? "正在转换" : "开始转换";
   queue.innerHTML = "";
   state.files.forEach((item, index) => {
@@ -99,11 +106,24 @@ async function connect() {
     connectionStatus.className = "connection ready";
     const env = payload.environment;
     document.querySelector("#versionText").textContent = `应用 ${env.application_version}  ·  规则 ${env.engine_version}`;
+    await heartbeat();
+    state.heartbeatTimer = window.setInterval(heartbeat, 15000);
   } catch (error) {
     connectionStatus.textContent = "本地服务连接失败";
     connectionStatus.className = "connection error";
   }
   render();
+}
+
+async function heartbeat() {
+  if (!state.token) return;
+  try {
+    await fetch("/api/heartbeat", {
+      method: "POST",
+      cache: "no-store",
+      headers: { "X-WX-Token": state.token, "X-Magic-Client": state.clientId }
+    });
+  } catch (error) {}
 }
 
 fileInput.addEventListener("change", event => addFiles(event.target.files));
@@ -117,9 +137,18 @@ dropzone.addEventListener("drop", event => {
 clearButton.addEventListener("click", () => { if (!state.running) { state.files = []; fileInput.value = ""; render(); } });
 convertButton.addEventListener("click", convertAll);
 shutdownButton.addEventListener("click", async () => {
+  if (state.heartbeatTimer) window.clearInterval(state.heartbeatTimer);
   shutdownButton.disabled = true;
   shutdownButton.textContent = "正在退出";
-  try { await fetch("/api/shutdown", { method: "POST", headers: { "X-WX-Token": state.token } }); } catch (error) {}
+  try {
+    const response = await fetch("/api/shutdown", { method: "POST", headers: { "X-WX-Token": state.token } });
+    if (!response.ok) throw new Error("busy");
+  } catch (error) {
+    shutdownButton.disabled = false;
+    shutdownButton.textContent = "退出程序";
+    state.heartbeatTimer = window.setInterval(heartbeat, 15000);
+    return;
+  }
   document.body.innerHTML = '<main class="closed"><h1>程序已退出</h1><p>现在可以关闭这个页面。</p></main>';
 });
 

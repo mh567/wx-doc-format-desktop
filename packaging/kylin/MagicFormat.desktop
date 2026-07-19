@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=WX 文档格式
-Comment=本地离线转换 DOCX 和 Markdown
+Name=Magic Format
+Comment=将 DOCX 和 Markdown 转换为 WX 模板格式
 Exec=sh -c '"$(dirname "%k")/start.sh"'
 Terminal=false
 Categories=Office;

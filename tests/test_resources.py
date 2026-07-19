@@ -10,6 +10,22 @@ from wxdoc_desktop.resources import template_sha256, verified_template
 from wxdoc_desktop.service import ConversionError, validate_input
 
 
+def test_vendored_core_contains_all_local_imports():
+    import ast
+
+    root = Path(__file__).parents[1] / "src" / "wxdoc_core"
+    modules = {path.stem for path in root.glob("*.py")}
+    missing: set[str] = set()
+    for path in root.glob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module:
+                dependency = node.module.split(".", 1)[0]
+                if dependency not in modules:
+                    missing.add(dependency)
+    assert missing == set()
+
+
 ROOT = Path(__file__).parents[1]
 
 

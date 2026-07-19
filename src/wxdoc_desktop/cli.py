@@ -32,7 +32,7 @@ def _convert(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="wx-doc-format", description="WX 文档格式转换")
+    parser = argparse.ArgumentParser(prog="magic-format", description="Magic Format 文档格式转换")
     subparsers = parser.add_subparsers(dest="command")
 
     convert = subparsers.add_parser("convert", help="转换 DOCX 或 Markdown")
@@ -45,6 +45,9 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--no-browser", action="store_true")
     serve.set_defaults(handler=lambda args: _serve(args))
 
+    helper = subparsers.add_parser("serve-helper", help=argparse.SUPPRESS)
+    helper.set_defaults(handler=_serve_helper)
+
     environment = subparsers.add_parser("env", help="导出不含文档内容的环境报告")
     environment.add_argument("--output", type=Path)
     environment.set_defaults(handler=_environment)
@@ -55,6 +58,25 @@ def _serve(args: argparse.Namespace) -> int:
     from .server import run_server
 
     run_server(open_browser=not args.no_browser)
+    return 0
+
+
+def _serve_helper(args: argparse.Namespace) -> int:
+    from .server import run_server
+
+    return run_server(open_browser=False, managed=True)
+
+
+def _launch(args: argparse.Namespace) -> int:
+    from .instance import launch
+
+    result = launch()
+    if result.status == "busy-version":
+        print(result.message or "当前版本正在处理文档，请完成后再启动新版本。", file=sys.stderr)
+        return 2
+    if result.status != "activated":
+        print(result.message or "Magic Format 启动失败。", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -70,5 +92,5 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     if not args.command:
-        args = parser.parse_args(["serve"])
+        args.handler = _launch
     raise SystemExit(args.handler(args))

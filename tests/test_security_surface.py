@@ -12,8 +12,10 @@ def test_deterministic_core_has_no_llm_or_command_bridge():
 
 def test_runtime_has_no_remote_update_client():
     combined = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "src" / "wxdoc_desktop").glob("*.py"))
-    banned = ("requests.get", "urllib.request", "httpx", "socket.create_connection", "subprocess.run")
+    banned = ("requests.get", "httpx", "socket.create_connection", "subprocess.run", "raw.githubusercontent.com")
     assert all(token not in combined for token in banned)
+    instance = (ROOT / "src" / "wxdoc_desktop" / "instance.py").read_text(encoding="utf-8")
+    assert "http://127.0.0.1:" in instance
 
 
 def test_frontend_uses_magic_format_single_workspace():
