@@ -13,8 +13,8 @@
       "vendored_sha256": "91719212e6997c3fef3dddfd3e53078058c8bb178b1b786ec764671c911bad1a"
     },
     "docx_pipeline.py": {
-      "upstream_sha256": "d7f649957e29d21ce75d6a2b7287050beba80d60343896e59334597e0ce5ed4f",
-      "vendored_sha256": "c3274c5d3397fd5f85161eb1d9ac4928e3eb2bb0a1d0f0159d5215bfce0f284c"
+      "upstream_sha256": "5065616972cc1705705711b9ec9835a223a82a6df54a45db4115a412951b8b7d",
+      "vendored_sha256": "3cb19b9d5f399599499ee4de1a3ec182c8f82de68873c1efc2a1588d998ad1ca"
     },
     "docx_render.py": {
       "upstream_sha256": "d81de9413e8ba8d5a1116c9e2500e91d3e1ecc178e219a9b636f0bd9a30535e1",
@@ -29,8 +29,8 @@
       "vendored_sha256": "c630b220ea9a73ebc7ca5c4a475d217a22752741970c7d36b0dd5da019fcd36e"
     },
     "list_detector.py": {
-      "upstream_sha256": "5d626847ad3beeecd2132d1c7d2ead22651b7cda5cdb68eca4fdcf303342b159",
-      "vendored_sha256": "8580e0652aac94b0b6e392ab1498cb0e0020a65d51f7093e5d30ddd90156a429"
+      "upstream_sha256": "9a6b263936790850a5d00d97baa271e0e1e5270b3f3b3eac8c14d2ef6104869c",
+      "vendored_sha256": "349840a5e00f6ed1d2c601b43954e6f1a439266d86041ec1025c962ddef0ecd3"
     },
     "list_style_mapping.py": {
       "upstream_sha256": "05a9215bdbd00fc35a6381ab54debc37cdc497ec62cd298f7023eed502c46e4c",
@@ -41,12 +41,12 @@
       "vendored_sha256": "bae6b271df8c2d9cfab8fb5a29a939274651436d4ca5c314473a3b588136730b"
     },
     "model_normalization.py": {
-      "upstream_sha256": "e5b6a9db7299097957e245519a206cba41afdd3d48fdfc93c5fa5dabfa092b73",
-      "vendored_sha256": "c8b60a4b5ca8b043a3bcf4e2ea625d74656c6d730edd0e20fee9215afe25fff7"
+      "upstream_sha256": "8bb2b6ddc064f5008fca458def51beff1798cd9b98df625fa63b3ef970d8fffb",
+      "vendored_sha256": "911e4bd6d601f73bb3e3aa3a0908945a0b7d4fd7e6858e5dc5385b4d78fe324c"
     },
     "reporting.py": {
-      "upstream_sha256": "512bbc214b6db43b6d068bf97f3ea140e8f583498fafa81fdfd342ae82b3096f",
-      "vendored_sha256": "512bbc214b6db43b6d068bf97f3ea140e8f583498fafa81fdfd342ae82b3096f"
+      "upstream_sha256": "1d070497305b039e136940c20b188b4eca3e8bf4846e8fd68bd01fd7f292396c",
+      "vendored_sha256": "1d070497305b039e136940c20b188b4eca3e8bf4846e8fd68bd01fd7f292396c"
     },
     "table_formatting.py": {
       "upstream_sha256": "4fcba7ebdb4f1f2cacf64fb15607553ab124fc9d74fed48318a92da461c09ce1",
@@ -65,8 +65,8 @@
       "vendored_sha256": "6e1febd3db45a9ca9cc713707b3294fba3d4b30cac45c25ba31fa82c400983a1"
     },
     "text_utils.py": {
-      "upstream_sha256": "6147bef386e07d172664379eacf63a928c7512880c44b389e2dae2f92269b758",
-      "vendored_sha256": "05833979f08c6273911b91cdbbc40ca92b75bdc2cf93edc23dba341131f840d8"
+      "upstream_sha256": "802984149cb048ce74010136cb21f58f157c6c5e138b5d00912258ae636a3822",
+      "vendored_sha256": "b4f80b34281d8bf27c38e463125ef4220174c54d965ca5f15ba5038b540a5952"
     },
     "toc_detector.py": {
       "upstream_sha256": "4cba7cfe3408a694e9f997047578e2c0a4f26dbdae2dc403bd201b208430e4c1",
@@ -81,5 +81,5 @@
     "path": "src/wxdoc_desktop/assets/wx_template.docx",
     "sha256": "3da91436d40dcd3cbfd1d5b1d38321c94785611dc78974aff4831e158fabfce5"
   },
-  "upstream_version": "0.12.7"
+  "upstream_version": "0.12.9"
 }
