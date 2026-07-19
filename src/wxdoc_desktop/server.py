@@ -288,7 +288,7 @@ def run_server(*, open_browser: bool = True, managed: bool = False, idle_timeout
     state = ApplicationState(managed=managed, idle_timeout=idle_timeout)
     server = LocalServer(("127.0.0.1", 0), Handler, state)
     url = f"http://127.0.0.1:{server.server_port}/"
-    print(f"Magic Format 已启动: {url}")
+    print(f"Magic Format: {url}")
     if managed:
         write_descriptor(
             RuntimeDescriptor(

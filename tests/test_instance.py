@@ -132,6 +132,7 @@ def test_repeated_launcher_reuses_helper_and_shutdown_cleans_descriptor(runtime_
             "MAGIC_FORMAT_RUNTIME_DIR": str(runtime_dir),
             "MAGIC_FORMAT_NO_BROWSER": "1",
             "PYTHONPATH": str(root / "src"),
+            "PYTHONIOENCODING": "cp1252",
         }
     )
     descriptor: RuntimeDescriptor | None = None
