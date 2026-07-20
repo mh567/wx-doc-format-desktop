@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 from . import __version__
+from .environment import open_browser, show_browser_open_failure
 
 
 APP_DIRECTORY = "Magic Format"
@@ -173,10 +174,9 @@ def activate(descriptor: RuntimeDescriptor, *, timeout: float = 1.5) -> Activati
     headers = {
         "X-Magic-Instance": descriptor.token,
         "X-Magic-Version": __version__,
+        "X-Magic-No-Browser": "1",
         "Content-Length": "0",
     }
-    if os.environ.get("MAGIC_FORMAT_NO_BROWSER") == "1":
-        headers["X-Magic-No-Browser"] = "1"
     request = urllib.request.Request(
         descriptor.url + "api/activate",
         method="POST",
@@ -194,6 +194,16 @@ def activate(descriptor: RuntimeDescriptor, *, timeout: float = 1.5) -> Activati
         return ActivationResult(str(payload.get("status", "unavailable")), str(payload.get("message", "")))
     except (OSError, ValueError, json.JSONDecodeError):
         return ActivationResult("unreachable")
+
+
+def _open_activated_interface(descriptor: RuntimeDescriptor, result: ActivationResult) -> ActivationResult:
+    if result.status != "activated" or os.environ.get("MAGIC_FORMAT_NO_BROWSER") == "1":
+        return result
+    browser = open_browser(descriptor.url)
+    if browser.success:
+        return result
+    show_browser_open_failure(descriptor.url, browser.message)
+    return ActivationResult("browser-failed", browser.message)
 
 
 def _helper_command() -> list[str]:
@@ -226,7 +236,7 @@ def launch(*, wait_seconds: float = 20.0) -> ActivationResult:
     if descriptor is not None:
         result = activate(descriptor)
         if result.status in {"activated", "busy-version"}:
-            return result
+            return _open_activated_interface(descriptor, result)
         if result.status == "restart-version":
             deadline = time.monotonic() + min(wait_seconds, 3.0)
             while time.monotonic() < deadline and read_descriptor() is not None:
@@ -244,7 +254,7 @@ def launch(*, wait_seconds: float = 20.0) -> ActivationResult:
             last_descriptor = current
             result = activate(current)
             if result.status != "unreachable":
-                return result
+                return _open_activated_interface(current, result)
         time.sleep(0.1)
     if last_descriptor is not None:
         return ActivationResult("unreachable", "后台服务已启动，但本地界面暂时无法连接。")

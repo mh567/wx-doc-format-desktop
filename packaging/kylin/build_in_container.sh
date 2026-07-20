@@ -62,7 +62,13 @@ cd "$root"
 "$venv/bin/python" "$root/tools/check_release.py" --tag "v$version"
 "$venv/bin/python" "$root/packaging/build.py"
 
-cp "$root/packaging/kylin/start.sh" "$root/dist/start.sh"
-cp "$root/packaging/kylin/MagicFormat.desktop" "$root/dist/MagicFormat.desktop"
-tar -C "$root/dist" -czf "$root/wx-doc-format-$version-kylin-v10-$architecture.tar.gz" \
-  MagicFormat start.sh MagicFormat.desktop
+package_name="MagicFormat-$version"
+package_root="$root/dist/$package_name"
+rm -rf "$package_root"
+mkdir -p "$package_root"
+cp -a "$root/dist/MagicFormat/." "$package_root/"
+cp "$root/packaging/kylin/start.sh" "$package_root/start.sh"
+cp "$root/packaging/kylin/MagicFormat.desktop" "$package_root/MagicFormat.desktop"
+chmod +x "$package_root/MagicFormat" "$package_root/MagicFormatServer" \
+  "$package_root/start.sh" "$package_root/MagicFormat.desktop"
+tar -C "$root/dist" -czf "$root/wx-doc-format-$version-kylin-v10-$architecture.tar.gz" "$package_name"

@@ -2,6 +2,6 @@
 Type=Application
 Name=Magic Format
 Comment=将 DOCX 和 Markdown 转换为 WX 模板格式
-Exec=sh -c '"$(dirname "%k")/start.sh"'
+Exec=sh -c "desktop=\$1; exec \"\$(dirname \"\$desktop\")/MagicFormat\"" sh %k
 Terminal=false
 Categories=Office;

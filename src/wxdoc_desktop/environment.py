@@ -3,11 +3,14 @@ from __future__ import annotations
 import json
 import os
 import platform
+import shutil
+import subprocess
 import sys
 import tempfile
 import threading
 import webbrowser
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 
 from wxdoc_core import engine_version
@@ -42,8 +45,99 @@ def _system_browser_environment():
 
 
 def open_default_browser(url: str) -> bool:
+    return open_browser(url).success
+
+
+@dataclass(frozen=True)
+class BrowserOpenResult:
+    success: bool
+    method: str = ""
+    message: str = ""
+
+
+def _browser_subprocess_environment() -> dict[str, str]:
+    environment = os.environ.copy()
+    if sys.platform.startswith("linux"):
+        original_library_path = environment.get("LD_LIBRARY_PATH_ORIG")
+        if original_library_path is None:
+            environment.pop("LD_LIBRARY_PATH", None)
+        else:
+            environment["LD_LIBRARY_PATH"] = original_library_path
+    return environment
+
+
+def _launch_browser_command(command: list[str], environment: dict[str, str]) -> tuple[bool, str]:
+    try:
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+            start_new_session=True,
+            env=environment,
+        )
+    except OSError as exc:
+        return False, str(exc)
+    try:
+        return process.wait(timeout=0.75) == 0, f"退出码 {process.returncode}"
+    except subprocess.TimeoutExpired:
+        return True, ""
+
+
+def open_browser(url: str) -> BrowserOpenResult:
+    if sys.platform.startswith("linux"):
+        environment = _browser_subprocess_environment()
+        candidates = (("xdg-open", ["xdg-open", url]), ("gio", ["gio", "open", url]))
+        failures: list[str] = []
+        for method, command in candidates:
+            if shutil.which(command[0], path=environment.get("PATH")) is None:
+                continue
+            success, detail = _launch_browser_command(command, environment)
+            if success:
+                return BrowserOpenResult(True, method)
+            failures.append(f"{method}: {detail}")
+    else:
+        failures = []
+
     with _system_browser_environment():
-        return webbrowser.open(url)
+        try:
+            if webbrowser.open(url):
+                return BrowserOpenResult(True, "webbrowser")
+            failures.append("webbrowser: 未找到可用的默认浏览器")
+        except (OSError, webbrowser.Error) as exc:
+            failures.append(f"webbrowser: {exc}")
+    detail = "；".join(failures) if failures else "未找到可用的默认浏览器"
+    return BrowserOpenResult(False, message=f"无法自动打开浏览器。请手动访问 {url} 详情：{detail}")
+
+
+def show_browser_open_failure(url: str, message: str) -> bool:
+    if not sys.platform.startswith("linux"):
+        return False
+    environment = _browser_subprocess_environment()
+    text = message or f"无法自动打开浏览器。请手动访问 {url}"
+    candidates = (
+        ["zenity", "--error", "--title=Magic Format", f"--text={text}"],
+        ["kdialog", "--title", "Magic Format", "--error", text],
+        ["notify-send", "Magic Format", text],
+    )
+    for command in candidates:
+        if shutil.which(command[0], path=environment.get("PATH")) is None:
+            continue
+        try:
+            subprocess.Popen(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                close_fds=True,
+                start_new_session=True,
+                env=environment,
+            )
+            return True
+        except OSError:
+            continue
+    return False
 
 
 def _glibc_version() -> str | None:

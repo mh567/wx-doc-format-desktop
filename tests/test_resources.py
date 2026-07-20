@@ -71,6 +71,7 @@ def test_linux_browser_uses_original_library_path_and_restores_application_envir
     monkeypatch.setattr(environment.sys, "platform", "linux")
     monkeypatch.setenv("LD_LIBRARY_PATH", "/opt/magic-format/_internal")
     monkeypatch.setenv("LD_LIBRARY_PATH_ORIG", "/usr/local/lib")
+    monkeypatch.setattr(environment.shutil, "which", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
         environment.webbrowser,
         "open",
@@ -87,6 +88,7 @@ def test_linux_browser_removes_bundled_library_path_when_no_original_exists(monk
     monkeypatch.setattr(environment.sys, "platform", "linux")
     monkeypatch.setenv("LD_LIBRARY_PATH", "/opt/magic-format/_internal")
     monkeypatch.delenv("LD_LIBRARY_PATH_ORIG", raising=False)
+    monkeypatch.setattr(environment.shutil, "which", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
         environment.webbrowser,
         "open",
@@ -111,6 +113,55 @@ def test_non_linux_browser_keeps_application_library_path(monkeypatch):
 
     assert environment.open_default_browser("http://127.0.0.1:42123/") is True
     assert observed == ["/opt/magic-format/_internal"]
+
+
+def test_linux_browser_prefers_xdg_open_with_sanitized_environment(monkeypatch):
+    observed: list[tuple[list[str], str | None]] = []
+    monkeypatch.setattr(environment.sys, "platform", "linux")
+    monkeypatch.setenv("LD_LIBRARY_PATH", "/opt/magic-format/_internal")
+    monkeypatch.setenv("LD_LIBRARY_PATH_ORIG", "/usr/local/lib")
+    monkeypatch.setattr(environment.shutil, "which", lambda name, **_kwargs: f"/usr/bin/{name}")
+    monkeypatch.setattr(
+        environment,
+        "_launch_browser_command",
+        lambda command, child_environment: observed.append((command, child_environment.get("LD_LIBRARY_PATH"))) or (True, ""),
+    )
+
+    result = environment.open_browser("http://127.0.0.1:42123/")
+    assert result.success is True
+    assert result.method == "xdg-open"
+    assert observed == [(["xdg-open", "http://127.0.0.1:42123/"], "/usr/local/lib")]
+    assert environment.os.environ["LD_LIBRARY_PATH"] == "/opt/magic-format/_internal"
+
+
+def test_linux_browser_falls_back_from_xdg_open_to_gio(monkeypatch):
+    commands: list[list[str]] = []
+    monkeypatch.setattr(environment.sys, "platform", "linux")
+    monkeypatch.setattr(environment.shutil, "which", lambda name, **_kwargs: f"/usr/bin/{name}")
+
+    def launch(command, _environment):
+        commands.append(command)
+        return (command[0] == "gio", "failed")
+
+    monkeypatch.setattr(environment, "_launch_browser_command", launch)
+    result = environment.open_browser("http://127.0.0.1:42123/")
+    assert result.success is True
+    assert result.method == "gio"
+    assert commands == [
+        ["xdg-open", "http://127.0.0.1:42123/"],
+        ["gio", "open", "http://127.0.0.1:42123/"],
+    ]
+
+
+def test_kylin_package_has_root_launcher_and_companion_files():
+    start_script = (ROOT / "packaging" / "kylin" / "start.sh").read_text(encoding="utf-8")
+    desktop_entry = (ROOT / "packaging" / "kylin" / "MagicFormat.desktop").read_text(encoding="utf-8")
+    build_script = (ROOT / "packaging" / "kylin" / "build_in_container.sh").read_text(encoding="utf-8")
+
+    assert 'exec "$SCRIPT_DIR/MagicFormat"' in start_script
+    assert "/MagicFormat\\\"" in desktop_entry
+    assert 'cp -a "$root/dist/MagicFormat/." "$package_root/"' in build_script
+    assert 'chmod +x "$package_root/MagicFormat"' in build_script
 
 
 def test_rejects_unsupported_input(tmp_path: Path):

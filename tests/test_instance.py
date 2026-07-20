@@ -12,11 +12,14 @@ from pathlib import Path
 import pytest
 
 from wxdoc_desktop import __version__
+from wxdoc_desktop.environment import BrowserOpenResult
 from wxdoc_desktop.instance import (
+    ActivationResult,
     InstanceLock,
     RuntimeDescriptor,
     activate,
     descriptor_path,
+    launch,
     read_descriptor,
     remove_descriptor,
     write_descriptor,
@@ -73,8 +76,6 @@ def _post(url: str, headers: dict[str, str]) -> tuple[int, dict]:
 def test_activate_reuses_server_and_requires_instance_token(runtime_dir: Path, monkeypatch: pytest.MonkeyPatch):
     state = ApplicationState(managed=True, idle_timeout=60)
     server = LocalServer(("127.0.0.1", 0), Handler, state)
-    opened: list[str] = []
-    monkeypatch.setattr("wxdoc_desktop.server.open_default_browser", lambda url: opened.append(url))
     thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
     thread.start()
     descriptor = RuntimeDescriptor(os.getpid(), server.server_port, state.instance_token, __version__, time.time(), "test")
@@ -87,16 +88,56 @@ def test_activate_reuses_server_and_requires_instance_token(runtime_dir: Path, m
         assert result.status == "activated"
         second = activate(descriptor)
         assert second.status == "activated"
-        deadline = time.monotonic() + 1
-        while len(opened) < 2 and time.monotonic() < deadline:
-            time.sleep(0.01)
-        assert opened == [descriptor.url, descriptor.url]
         assert state.activation_count == 2
     finally:
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
         state.close()
+
+
+def test_launch_opens_interface_in_launcher(runtime_dir: Path, monkeypatch: pytest.MonkeyPatch):
+    descriptor = RuntimeDescriptor(os.getpid(), 42123, "a" * 32, __version__, time.time(), "test")
+    opened: list[str] = []
+    monkeypatch.setattr("wxdoc_desktop.instance.read_descriptor", lambda: descriptor)
+    monkeypatch.setattr("wxdoc_desktop.instance.activate", lambda _descriptor: ActivationResult("activated"))
+    monkeypatch.setattr(
+        "wxdoc_desktop.instance.open_browser",
+        lambda url: opened.append(url) or BrowserOpenResult(True, "xdg-open"),
+    )
+
+    assert launch().status == "activated"
+    assert opened == [descriptor.url]
+
+
+def test_launch_reports_browser_failure_with_manual_url(runtime_dir: Path, monkeypatch: pytest.MonkeyPatch):
+    descriptor = RuntimeDescriptor(os.getpid(), 42123, "a" * 32, __version__, time.time(), "test")
+    notices: list[tuple[str, str]] = []
+    monkeypatch.setattr("wxdoc_desktop.instance.read_descriptor", lambda: descriptor)
+    monkeypatch.setattr("wxdoc_desktop.instance.activate", lambda _descriptor: ActivationResult("activated"))
+    monkeypatch.setattr(
+        "wxdoc_desktop.instance.open_browser",
+        lambda _url: BrowserOpenResult(False, message=f"请手动访问 {descriptor.url}"),
+    )
+    monkeypatch.setattr(
+        "wxdoc_desktop.instance.show_browser_open_failure",
+        lambda url, message: notices.append((url, message)) or True,
+    )
+
+    result = launch()
+    assert result.status == "browser-failed"
+    assert descriptor.url in result.message
+    assert notices == [(descriptor.url, result.message)]
+
+
+def test_launch_can_skip_browser_for_package_smoke(runtime_dir: Path, monkeypatch: pytest.MonkeyPatch):
+    descriptor = RuntimeDescriptor(os.getpid(), 42123, "a" * 32, __version__, time.time(), "test")
+    monkeypatch.setenv("MAGIC_FORMAT_NO_BROWSER", "1")
+    monkeypatch.setattr("wxdoc_desktop.instance.read_descriptor", lambda: descriptor)
+    monkeypatch.setattr("wxdoc_desktop.instance.activate", lambda _descriptor: ActivationResult("activated"))
+    monkeypatch.setattr("wxdoc_desktop.instance.open_browser", lambda _url: pytest.fail("不应调用浏览器"))
+
+    assert launch().status == "activated"
 
 
 def test_heartbeat_blocks_idle_until_client_expires(monkeypatch: pytest.MonkeyPatch):

@@ -193,11 +193,6 @@ class Handler(BaseHTTPRequestHandler):
             with self.state.lock:
                 self.state.activation_count += 1
             self.state.touch()
-            if not secrets.compare_digest(self.headers.get("X-Magic-No-Browser", ""), "1"):
-                threading.Thread(
-                    target=lambda: open_default_browser(f"http://127.0.0.1:{self.server.server_port}/"),
-                    daemon=True,
-                ).start()
             self._json({"ok": True, "status": "activated", "version": __version__})
             return
         if not self._valid_token():
