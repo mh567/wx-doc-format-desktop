@@ -74,7 +74,7 @@ def test_activate_reuses_server_and_requires_instance_token(runtime_dir: Path, m
     state = ApplicationState(managed=True, idle_timeout=60)
     server = LocalServer(("127.0.0.1", 0), Handler, state)
     opened: list[str] = []
-    monkeypatch.setattr("wxdoc_desktop.server.webbrowser.open", lambda url: opened.append(url))
+    monkeypatch.setattr("wxdoc_desktop.server.open_default_browser", lambda url: opened.append(url))
     thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
     thread.start()
     descriptor = RuntimeDescriptor(os.getpid(), server.server_port, state.instance_token, __version__, time.time(), "test")

@@ -1,16 +1,49 @@
 from __future__ import annotations
 
 import json
+import os
 import platform
 import sys
 import tempfile
+import threading
 import webbrowser
+from contextlib import contextmanager
 from pathlib import Path
 
 from wxdoc_core import engine_version
 
 from . import __version__
 from .resources import template_sha256, verified_template
+
+
+_BROWSER_ENVIRONMENT_LOCK = threading.Lock()
+
+
+@contextmanager
+def _system_browser_environment():
+    if not sys.platform.startswith("linux"):
+        yield
+        return
+
+    with _BROWSER_ENVIRONMENT_LOCK:
+        bundled_library_path = os.environ.get("LD_LIBRARY_PATH")
+        original_library_path = os.environ.get("LD_LIBRARY_PATH_ORIG")
+        if original_library_path is None:
+            os.environ.pop("LD_LIBRARY_PATH", None)
+        else:
+            os.environ["LD_LIBRARY_PATH"] = original_library_path
+        try:
+            yield
+        finally:
+            if bundled_library_path is None:
+                os.environ.pop("LD_LIBRARY_PATH", None)
+            else:
+                os.environ["LD_LIBRARY_PATH"] = bundled_library_path
+
+
+def open_default_browser(url: str) -> bool:
+    with _system_browser_environment():
+        return webbrowser.open(url)
 
 
 def _glibc_version() -> str | None:

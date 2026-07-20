@@ -9,14 +9,13 @@ import tempfile
 import threading
 import time
 import urllib.parse
-import webbrowser
 from contextlib import contextmanager
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from . import __version__
-from .environment import environment_report
+from .environment import environment_report, open_default_browser
 from .instance import InstanceLock, RuntimeDescriptor, remove_descriptor, write_descriptor
 from .resources import static_text
 from .service import MAX_INPUT_BYTES, ConversionError, ConversionRequest, convert_document
@@ -195,7 +194,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.state.activation_count += 1
             self.state.touch()
             if not secrets.compare_digest(self.headers.get("X-Magic-No-Browser", ""), "1"):
-                threading.Thread(target=lambda: webbrowser.open(f"http://127.0.0.1:{self.server.server_port}/"), daemon=True).start()
+                threading.Thread(
+                    target=lambda: open_default_browser(f"http://127.0.0.1:{self.server.server_port}/"),
+                    daemon=True,
+                ).start()
             self._json({"ok": True, "status": "activated", "version": __version__})
             return
         if not self._valid_token():
@@ -302,7 +304,7 @@ def run_server(*, open_browser: bool = True, managed: bool = False, idle_timeout
         )
         threading.Thread(target=_idle_monitor, args=(server,), daemon=True).start()
     if open_browser:
-        threading.Timer(0.35, lambda: webbrowser.open(url)).start()
+        threading.Timer(0.35, lambda: open_default_browser(url)).start()
     try:
         server.serve_forever(poll_interval=0.25)
     except KeyboardInterrupt:

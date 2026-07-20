@@ -5,6 +5,7 @@ import pytest
 from docx import Document
 
 from wxdoc_desktop.environment import environment_report
+from wxdoc_desktop import environment
 from wxdoc_desktop import __version__
 from wxdoc_desktop.resources import template_sha256, verified_template
 from wxdoc_desktop.service import ConversionError, validate_input
@@ -63,6 +64,53 @@ def test_environment_report_handles_headless_linux(monkeypatch):
     monkeypatch.setattr("wxdoc_desktop.environment.webbrowser.get", unavailable_browser)
     report = environment_report()
     assert report["default_browser_available"] is False
+
+
+def test_linux_browser_uses_original_library_path_and_restores_application_environment(monkeypatch):
+    observed: list[str | None] = []
+    monkeypatch.setattr(environment.sys, "platform", "linux")
+    monkeypatch.setenv("LD_LIBRARY_PATH", "/opt/magic-format/_internal")
+    monkeypatch.setenv("LD_LIBRARY_PATH_ORIG", "/usr/local/lib")
+    monkeypatch.setattr(
+        environment.webbrowser,
+        "open",
+        lambda _url: observed.append(environment.os.environ.get("LD_LIBRARY_PATH")) or True,
+    )
+
+    assert environment.open_default_browser("http://127.0.0.1:42123/") is True
+    assert observed == ["/usr/local/lib"]
+    assert environment.os.environ["LD_LIBRARY_PATH"] == "/opt/magic-format/_internal"
+
+
+def test_linux_browser_removes_bundled_library_path_when_no_original_exists(monkeypatch):
+    observed: list[str | None] = []
+    monkeypatch.setattr(environment.sys, "platform", "linux")
+    monkeypatch.setenv("LD_LIBRARY_PATH", "/opt/magic-format/_internal")
+    monkeypatch.delenv("LD_LIBRARY_PATH_ORIG", raising=False)
+    monkeypatch.setattr(
+        environment.webbrowser,
+        "open",
+        lambda _url: observed.append(environment.os.environ.get("LD_LIBRARY_PATH")) or True,
+    )
+
+    assert environment.open_default_browser("http://127.0.0.1:42123/") is True
+    assert observed == [None]
+    assert environment.os.environ["LD_LIBRARY_PATH"] == "/opt/magic-format/_internal"
+
+
+def test_non_linux_browser_keeps_application_library_path(monkeypatch):
+    observed: list[str | None] = []
+    monkeypatch.setattr(environment.sys, "platform", "darwin")
+    monkeypatch.setenv("LD_LIBRARY_PATH", "/opt/magic-format/_internal")
+    monkeypatch.setenv("LD_LIBRARY_PATH_ORIG", "/usr/local/lib")
+    monkeypatch.setattr(
+        environment.webbrowser,
+        "open",
+        lambda _url: observed.append(environment.os.environ.get("LD_LIBRARY_PATH")) or True,
+    )
+
+    assert environment.open_default_browser("http://127.0.0.1:42123/") is True
+    assert observed == ["/opt/magic-format/_internal"]
 
 
 def test_rejects_unsupported_input(tmp_path: Path):
