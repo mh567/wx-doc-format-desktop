@@ -32,9 +32,16 @@ from .document_model import (
 )
 from .md_pipeline import model_list_type_for_kind
 from .list_style_mapping import wx_list_style_name
+from .note_semantics import source_note_role, strip_source_note_marker
 from .table_semantics import classify_docx_table
 from .unordered_lists import annotate_unordered_candidates, paragraph_layout_evidence
 from .list_group_detection import annotate_semantic_list_groups
+from .appendix_semantics import (
+    annotate_appendix_ranges,
+    appendix_heading_level,
+    appendix_role_for_paragraph,
+    parse_appendix_title,
+)
 
 
 
@@ -77,14 +84,30 @@ def infer_docx_role(
     )
     import re
 
-    text = paragraph.text.strip()
+    raw_text = paragraph.text
+    text = raw_text.strip()
     style_name = paragraph.style.name if paragraph.style is not None else ""
 
     if is_toc_entry(text):
         return text, None, "skip"
+    appendix_role = appendix_role_for_paragraph(style_name, raw_text)
+    if appendix_role == "appendix_title":
+        return raw_text, style_name or "附录标题", appendix_role
+    if appendix_role and appendix_role.startswith("appendix_heading_"):
+        return text, style_name, appendix_role
+    note_role = source_note_role(style_name, numbering, text)
+    if note_role is not None:
+        parse_report.setdefault("inferred_notes", []).append({
+            "text": text,
+            "role": note_role,
+            "source": "docx-note-semantics",
+            "source_position": (numbering or {}).get("source_position"),
+            "style": style_name,
+        })
+        return strip_source_note_marker(text, note_role), None, note_role
     if is_caption_text(text):
         return text, "Caption", "caption"
-    if is_date_like_text(text) or is_toc_title(text):
+    if is_date_like_text(text):
         return text, None, "body"
     if style_name == "文档标题":
         return text, "文档标题", "title"
@@ -99,6 +122,8 @@ def infer_docx_role(
         if _stripped in _api_labels:
             return text, None, "body"
         return text, style_name, "heading"
+    if is_toc_title(text):
+        return text, None, "body"
 
     # A dotted Arabic section marker is a complete semantic token.  Resolve it
     # before Word numbering, list styles, and visible list markers so ``6.3``
@@ -178,9 +203,6 @@ def infer_docx_role(
     if text.startswith(("\u5907\u6ce8\uff1a", "\u7f16\u5199\u63d0\u793a\uff1a", "\u3010\u5907\u6ce8\u63d0\u793a\u3011", "\u3010\u7f16\u5199\u6837\u4f8b\u3011")):
         return clean_note_prefix(text), None, "note"
 
-    if re.match(r"^\u6ce8\s*\d+[\uff1a:]", text):
-        return text, None, "numbered_note"
-
     if is_formula_text(text):
         return text, "\u516c\u5f0f", "formula"
 
@@ -219,6 +241,7 @@ def parse_docx_to_model_simple(
     parse_report = new_report()
     block_index = 1
     active_list_levels: set[int] = set()
+    appendix_count = 0
 
     def next_id() -> str:
         nonlocal block_index
@@ -251,7 +274,7 @@ def parse_docx_to_model_simple(
             if role == "heading" and heading_level_from_style(source_style) is not None:
                 style = normalize_heading_style_level(style, heading_level_shift)
             source = source_record(
-                raw_text=text,
+                raw_text=block.text if role == "appendix_title" else text,
                 style=source_style,
                 num_id=num_id,
                 ilvl=num_level,
@@ -297,6 +320,7 @@ def parse_docx_to_model_simple(
                             body_block(
                                 next_id(),
                                 inferred_text,
+                                role=role if role in {"note", "numbered_note", "formula"} else None,
                                 source=source_record(**source, had_mixed_graphic=True),
                             ),
                         )
@@ -312,6 +336,34 @@ def parse_docx_to_model_simple(
                     model,
                     heading_block(
                         next_id(), inferred_text, 0, role="title", source=source,
+                    ),
+                )
+                reset_lists()
+            elif role == "appendix_title":
+                appendix_count += 1
+                title_data = parse_appendix_title(inferred_text, appendix_count)
+                append_block(
+                    model,
+                    appendix_block(
+                        next_id(),
+                        title_data["title"],
+                        appendix_id=title_data["appendix_id"],
+                        classification=title_data["classification"],
+                        title_lines=title_data["title_lines"],
+                        source=source,
+                    ),
+                )
+                reset_lists()
+            elif role.startswith("appendix_heading_"):
+                appendix_level = appendix_heading_level(source_style) or int(role.rsplit("_", 1)[1])
+                append_block(
+                    model,
+                    heading_block(
+                        next_id(),
+                        inferred_text,
+                        appendix_level,
+                        role="appendix_heading",
+                        source=source,
                     ),
                 )
                 reset_lists()
@@ -362,7 +414,10 @@ def parse_docx_to_model_simple(
                 from .text_utils import clean_note_prefix as _cnp
                 append_block(
                     model,
-                    body_block(next_id(), _cnp(inferred_text), source={**source, "role": role}),
+                    body_block(
+                        next_id(), _cnp(inferred_text), role=role,
+                        source={**source, "role": role},
+                    ),
                 )
                 reset_lists()
             else:
@@ -409,6 +464,7 @@ def parse_docx_to_model_simple(
             )
             reset_lists()
 
+    annotate_appendix_ranges(model, parse_report)
     annotate_unordered_candidates(model, parse_report)
     annotate_semantic_list_groups(model, parse_report)
     model["parse_report"] = parse_report

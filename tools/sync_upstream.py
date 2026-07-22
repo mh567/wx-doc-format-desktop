@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import re
@@ -13,6 +14,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 
 MODULES = (
+    "appendix_semantics",
     "audit",
     "caption_placement",
     "document_model",
@@ -25,12 +27,14 @@ MODULES = (
     "list_style_mapping",
     "md_pipeline",
     "model_normalization",
+    "note_semantics",
     "reporting",
     "table_formatting",
     "table_semantics",
     "template_finalizer",
     "template_profile",
     "text_utils",
+    "toc_contract",
     "toc_detector",
     "unordered_lists",
     "word_model_renderer",
@@ -67,6 +71,31 @@ def package_imports(text: str) -> str:
         r"\1from .\2 import ",
         text,
     )
+
+
+def validate_module_closure(source: Path) -> None:
+    available_modules = {path.stem for path in (source / "scripts").glob("*.py")}
+    selected_modules = set(MODULES)
+    missing: dict[str, list[str]] = {}
+    for module in MODULES:
+        source_path = source / "scripts" / f"{module}.py"
+        if not source_path.is_file():
+            raise SystemExit(f"Missing upstream module: {source_path}")
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+        local_imports = {
+            node.module.split(".", 1)[0]
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        } & available_modules
+        omitted = sorted(local_imports - selected_modules)
+        if omitted:
+            missing[source_path.name] = omitted
+    if missing:
+        details = "; ".join(
+            f"{filename}: {', '.join(imports)}"
+            for filename, imports in sorted(missing.items())
+        )
+        raise SystemExit(f"Upstream module closure is incomplete: {details}")
 
 
 def _local_name(tag: str) -> str:
@@ -126,6 +155,7 @@ def main() -> None:
     core_dir.mkdir(parents=True, exist_ok=True)
     asset_dir.mkdir(parents=True, exist_ok=True)
 
+    validate_module_closure(source)
     manifest: dict[str, object] = {"modules": {}, "template": {}}
     for module in MODULES:
         source_path = source / "scripts" / f"{module}.py"
