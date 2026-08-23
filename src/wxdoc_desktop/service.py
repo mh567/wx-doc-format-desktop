@@ -44,7 +44,7 @@ from wxdoc_core.model_normalization import (
 )
 from wxdoc_core.reporting import add_risk_warnings, new_report
 from wxdoc_core.table_semantics import audit_model_table_semantics
-from wxdoc_core.template_finalizer import apply_template_finalizer
+from wxdoc_core.template_finalizer import apply_template_finalizer, extract_template_toc_fragment
 from wxdoc_core.template_profile import load_template_profile
 from wxdoc_core.text_utils import (
     build_document_model_from_output,
@@ -325,6 +325,7 @@ def convert_document(request: ConversionRequest) -> ConversionResult:
         output_document = _open_template_renamed_media(template)
         temporary_output: Path | None = None
         try:
+            template_toc_fragment = extract_template_toc_fragment(output_document)
             _clear_document_body(output_document)
             numbering_ids = profile.get("numbering_ids", {})
             report = new_report(engine_version())
@@ -367,6 +368,7 @@ def convert_document(request: ConversionRequest) -> ConversionResult:
                 set_table_autofit_to_window=set_table_autofit_to_window,
                 looks_like_code_sample_table=looks_like_code_sample_table,
                 table_roles=table_roles,
+                template_toc_fragment=template_toc_fragment,
             )
             report["toc_replacement_audit"] = audit_toc_replacement(
                 output_document,

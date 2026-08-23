@@ -25,4 +25,5 @@ def test_docx_conversion_writes_document_and_reports(tmp_path: Path):
     assert report["application"]["offline"] is True
     assert report["application"]["engine_version"] == version
     assert report["application"]["version"] == version
+    assert report["template_finalizer"]["corrections"][0]["mode"] == "template_fragment"
     assert report["template_finalizer"]["style_audit"]["unexpected_styles"] == []
