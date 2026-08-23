@@ -21,7 +21,6 @@ from .environment import (
     open_default_browser,
     open_local_directory,
     open_local_file,
-    reveal_local_file,
 )
 from .instance import InstanceLock, RuntimeDescriptor, remove_descriptor, write_descriptor
 from .resources import static_text
@@ -251,7 +250,7 @@ class Handler(BaseHTTPRequestHandler):
             if parts[1] == "open-document":
                 action = open_local_file(result.output_path)
             elif parts[1] == "reveal":
-                action = reveal_local_file(result.output_path)
+                action = open_local_directory(result.output_path.parent)
             else:
                 action = open_browser(result.report_path.as_uri())
             if not action.success:

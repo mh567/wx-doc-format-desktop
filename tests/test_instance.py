@@ -180,11 +180,9 @@ def test_uploaded_document_uses_persistent_results_and_local_actions(tmp_path: P
     thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
     thread.start()
     opened: list[Path] = []
-    revealed: list[Path] = []
     directories: list[Path] = []
     reports: list[str] = []
     monkeypatch.setattr("wxdoc_desktop.server.open_local_file", lambda path: opened.append(path) or BrowserOpenResult(True))
-    monkeypatch.setattr("wxdoc_desktop.server.reveal_local_file", lambda path: revealed.append(path) or BrowserOpenResult(True))
     monkeypatch.setattr("wxdoc_desktop.server.open_local_directory", lambda path: directories.append(path) or BrowserOpenResult(True))
     monkeypatch.setattr("wxdoc_desktop.server.open_browser", lambda url: reports.append(url) or BrowserOpenResult(True))
     headers = {"X-WX-Token": state.csrf_token, "X-WX-Filename": "plan.docx"}
@@ -208,8 +206,7 @@ def test_uploaded_document_uses_persistent_results_and_local_actions(tmp_path: P
         assert directory_status == 200
         assert response["ok"] is True
         assert opened == [output]
-        assert revealed == [output]
-        assert directories == [results]
+        assert directories == [results, results]
         assert reports == [output.with_name("plan_WX格式_报告.html").as_uri()]
     finally:
         server.shutdown()
