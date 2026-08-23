@@ -138,8 +138,8 @@ def validate_input(path: Path) -> Path:
     source = path.expanduser().resolve()
     if not source.is_file():
         raise ConversionError("请选择存在的文件。")
-    if source.suffix.lower() not in {".docx", ".md", ".markdown"}:
-        raise ConversionError("仅支持 DOCX 和 Markdown 文件。")
+    if source.suffix.lower() not in {".docx", ".md"}:
+        raise ConversionError("仅支持 .docx 和 .md 文件。")
     if source.stat().st_size > MAX_INPUT_BYTES:
         raise ConversionError("文件超过 100 MB 安全限制。")
     if source.suffix.lower() == ".docx":
