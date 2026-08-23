@@ -11,7 +11,7 @@ Magic Format 用于在本机完成 DOCX、Markdown 文档的解析、规范化�
 
 ## 使用
 
-从 [GitHub Releases](https://github.com/mh567/wx-doc-format-desktop/releases) 下载对应系统的发布包。解压后启动程序，浏览器会自动打开本地操作页面。选择或拖放 DOCX、Markdown 文件即可批量转换。
+从 [GitHub Releases](https://github.com/mh567/wx-doc-format-desktop/releases) 下载对应系统的发布包。解压后启动程序，浏览器会自动打开本地操作页面。选择或拖放 `.docx`、`.md` 文件即可批量转换。结果默认保存到文稿目录下的 `Magic Format/转换结果`，可在页面中更改位置。
 
 源码运行：
 

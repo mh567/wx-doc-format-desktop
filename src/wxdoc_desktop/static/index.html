@@ -22,24 +22,33 @@
         <div class="section-heading">
           <div>
             <h1 id="converterTitle">转换文档</h1>
-            <p>选择文件，完成后下载排版文档和复核报告。</p>
+            <p>选择文件，结果会保存在本地结果目录。</p>
           </div>
           <span class="connection" id="connectionStatus">正在检查本地服务</span>
         </div>
 
         <label class="dropzone" id="dropzone" for="fileInput">
-          <input id="fileInput" type="file" accept=".docx,.md,.markdown" multiple>
+          <input id="fileInput" type="file" accept=".docx,.md" multiple>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
           <strong>拖放文件到这里</strong>
           <span>或点击选择，可以一次处理多个文件</span>
         </label>
-        <p class="format-note">支持 DOCX、MD 和 MARKDOWN，单个文件最大 100 MB</p>
+        <p class="format-note">支持 .docx 和 .md 文件，单个文件最大 100 MB</p>
+
+        <section class="result-directory" aria-label="结果目录">
+          <div><span>结果目录</span><strong id="resultDirectory">正在读取位置</strong></div>
+          <div class="directory-actions">
+            <button class="text-button" id="openDirectoryButton" type="button">打开结果目录</button>
+            <button class="text-button" id="changeDirectoryButton" type="button">更改位置</button>
+          </div>
+        </section>
 
         <div class="queue-header" id="queueHeader" hidden>
           <span id="queueSummary"></span>
           <button class="text-button" id="clearButton" type="button">清空列表</button>
         </div>
         <ol class="queue" id="queue" aria-live="polite"></ol>
+        <p class="action-note" id="actionNote" aria-live="polite"></p>
         <button class="primary-button" id="convertButton" type="button" disabled>
           <span>开始转换</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>

@@ -10,6 +10,7 @@ import urllib.request
 from pathlib import Path
 
 import pytest
+from docx import Document
 
 from wxdoc_desktop import __version__
 from wxdoc_desktop.environment import BrowserOpenResult
@@ -25,6 +26,7 @@ from wxdoc_desktop.instance import (
     write_descriptor,
 )
 from wxdoc_desktop.server import ApplicationState, Handler, LocalServer
+from wxdoc_desktop.result_store import ResultDirectorySettings
 
 
 @pytest.fixture
@@ -64,8 +66,8 @@ def test_instance_lock_excludes_a_second_server(runtime_dir: Path):
     second.release()
 
 
-def _post(url: str, headers: dict[str, str]) -> tuple[int, dict]:
-    request = urllib.request.Request(url, method="POST", headers={**headers, "Content-Length": "0"})
+def _post(url: str, headers: dict[str, str], body: bytes = b"") -> tuple[int, dict]:
+    request = urllib.request.Request(url, data=body, method="POST", headers={**headers, "Content-Length": str(len(body))})
     try:
         with urllib.request.urlopen(request, timeout=2) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
@@ -163,4 +165,54 @@ def test_conversion_guard_blocks_idle_exit():
         assert state.busy() is False
         assert state.idle() is True
     finally:
+        state.close()
+
+
+def test_uploaded_document_uses_persistent_results_and_local_actions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    source = tmp_path / "plan.docx"
+    document = Document()
+    document.add_heading("项目概述", level=1)
+    document.save(source)
+    settings = ResultDirectorySettings(tmp_path / "settings" / "settings.json")
+    results = settings.save(tmp_path / "results")
+    state = ApplicationState(managed=True, idle_timeout=60, result_settings=settings)
+    server = LocalServer(("127.0.0.1", 0), Handler, state)
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
+    thread.start()
+    opened: list[Path] = []
+    revealed: list[Path] = []
+    directories: list[Path] = []
+    reports: list[str] = []
+    monkeypatch.setattr("wxdoc_desktop.server.open_local_file", lambda path: opened.append(path) or BrowserOpenResult(True))
+    monkeypatch.setattr("wxdoc_desktop.server.reveal_local_file", lambda path: revealed.append(path) or BrowserOpenResult(True))
+    monkeypatch.setattr("wxdoc_desktop.server.open_local_directory", lambda path: directories.append(path) or BrowserOpenResult(True))
+    monkeypatch.setattr("wxdoc_desktop.server.open_browser", lambda url: reports.append(url) or BrowserOpenResult(True))
+    headers = {"X-WX-Token": state.csrf_token, "X-WX-Filename": "plan.docx"}
+    base_url = f"http://127.0.0.1:{server.server_port}"
+    try:
+        status, payload = _post(base_url + "/api/convert", headers, source.read_bytes())
+        assert status == 200
+        output = results / "plan_WX格式.docx"
+        assert output.is_file()
+
+        repeated_status, repeated = _post(base_url + "/api/convert", headers, source.read_bytes())
+        assert repeated_status == 200
+        assert repeated["job"] != payload["job"]
+        assert output.is_file()
+
+        for action in ("open-document", "reveal", "open-report"):
+            action_status, response = _post(base_url + f"/api/jobs/{payload['job']}/{action}", {"X-WX-Token": state.csrf_token})
+            assert action_status == 200
+            assert response["ok"] is True
+        directory_status, response = _post(base_url + "/api/result-directory/open", {"X-WX-Token": state.csrf_token})
+        assert directory_status == 200
+        assert response["ok"] is True
+        assert opened == [output]
+        assert revealed == [output]
+        assert directories == [results]
+        assert reports == [output.with_name("plan_WX格式_报告.html").as_uri()]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
         state.close()

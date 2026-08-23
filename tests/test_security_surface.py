@@ -23,4 +23,4 @@ def test_frontend_uses_magic_format_single_workspace():
     assert "Magic Format" in html
     assert 'class="intro"' not in html
     assert html.count('class="converter"') == 1
-    assert "支持 DOCX、MD 和 MARKDOWN" in html
+    assert "支持 .docx 和 .md 文件" in html
