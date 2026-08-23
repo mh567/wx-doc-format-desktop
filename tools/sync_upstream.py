@@ -24,6 +24,7 @@ MODULES = (
     "front_matter",
     "list_detector",
     "list_group_detection",
+    "list_hierarchy",
     "list_style_mapping",
     "md_pipeline",
     "model_normalization",
