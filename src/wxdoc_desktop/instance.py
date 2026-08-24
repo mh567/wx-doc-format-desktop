@@ -231,7 +231,7 @@ def start_helper() -> None:
     subprocess.Popen(_helper_command(), **options)
 
 
-def launch(*, wait_seconds: float = 20.0) -> ActivationResult:
+def launch(*, wait_seconds: float = 40.0) -> ActivationResult:
     descriptor = read_descriptor()
     if descriptor is not None:
         result = activate(descriptor)

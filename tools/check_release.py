@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import tomllib
 from pathlib import Path
 
 
@@ -41,6 +42,19 @@ def main() -> None:
         raise SystemExit(f"Version mismatch: expected {version}; observed {mismatches}")
     if args.tag and args.tag != f"v{version}":
         raise SystemExit(f"Tag {args.tag!r} must equal v{version}")
+
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    kylin_build = (ROOT / "packaging" / "kylin" / "build_in_container.sh").read_text(encoding="utf-8")
+    missing_kylin_dependencies = [
+        dependency
+        for dependency in project.get("dependencies", [])
+        if dependency not in kylin_build
+    ]
+    if missing_kylin_dependencies:
+        raise SystemExit(
+            "Kylin wheelhouse is missing runtime dependencies: "
+            + ", ".join(missing_kylin_dependencies)
+        )
     print(f"Version contract verified: {version}")
 
 

@@ -37,7 +37,7 @@ from wxdoc_core.front_matter import (
     inject_document_title,
 )
 from wxdoc_core.list_detector import analyze_docx_lists, audit_list_preservation
-from wxdoc_core.md_pipeline import parse_md_to_model
+from wxdoc_core.md_pipeline import audit_markdown_preservation, parse_md_to_model
 from wxdoc_core.model_normalization import (
     normalize_document_model,
     summarize_source_document_model,
@@ -383,6 +383,13 @@ def convert_document(request: ConversionRequest) -> ConversionResult:
             report["document_model_issues"] = validate_document_model(normalized)
             report["document_model_diff"] = compare_document_models(normalized, rendered)
             report["audit"] = _audit_document(output_document, profile, table_roles)
+            if source.suffix.lower() == ".md":
+                report["markdown_preservation_audit"] = audit_markdown_preservation(
+                    models["source"],
+                    normalized,
+                    report,
+                    rendered,
+                )
             report["list_preservation_audit"] = audit_list_preservation(
                 output_document,
                 normalized,

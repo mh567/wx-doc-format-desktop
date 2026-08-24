@@ -20,6 +20,7 @@ mkdir -p "$wheelhouse"
   "setuptools>=77" \
   wheel \
   "lxml==6.1.1" \
+  "markdown-it-py==4.2.0" \
   "python-docx==1.2.0" \
   "pyinstaller==6.21.0" \
   "pytest==9.1.1"

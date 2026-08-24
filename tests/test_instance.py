@@ -142,6 +142,23 @@ def test_launch_can_skip_browser_for_package_smoke(runtime_dir: Path, monkeypatc
     assert launch().status == "activated"
 
 
+def test_launch_waits_for_a_slow_cold_start(runtime_dir: Path, monkeypatch: pytest.MonkeyPatch):
+    clock = [0.0]
+    descriptor = RuntimeDescriptor(os.getpid(), 42123, "a" * 32, __version__, time.time(), "test")
+    monkeypatch.setenv("MAGIC_FORMAT_NO_BROWSER", "1")
+    monkeypatch.setattr("wxdoc_desktop.instance.start_helper", lambda: None)
+    monkeypatch.setattr(
+        "wxdoc_desktop.instance.read_descriptor",
+        lambda: descriptor if clock[0] >= 25.0 else None,
+    )
+    monkeypatch.setattr("wxdoc_desktop.instance.activate", lambda _descriptor: ActivationResult("activated"))
+    monkeypatch.setattr("wxdoc_desktop.instance.time.monotonic", lambda: clock[0])
+    monkeypatch.setattr("wxdoc_desktop.instance.time.sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+
+    assert launch().status == "activated"
+    assert clock[0] >= 25.0
+
+
 def test_heartbeat_blocks_idle_until_client_expires(monkeypatch: pytest.MonkeyPatch):
     clock = [100.0]
     monkeypatch.setattr("wxdoc_desktop.server.time.monotonic", lambda: clock[0])

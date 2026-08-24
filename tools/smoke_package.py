@@ -7,6 +7,7 @@ import platform
 import subprocess
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -31,15 +32,31 @@ def read_descriptor(path: Path, deadline: float) -> dict:
     raise RuntimeError("Packaged Helper did not publish its runtime descriptor.")
 
 
-def post(url: str, token: str) -> None:
+def post(
+    url: str,
+    token: str,
+    *,
+    body: bytes = b"",
+    filename: str | None = None,
+    timeout: float = 5,
+) -> dict:
+    headers = {
+        "X-WX-Token": token,
+        "Content-Length": str(len(body)),
+    }
+    if filename is not None:
+        headers["X-WX-Filename"] = urllib.parse.quote(filename)
     request = urllib.request.Request(
         url,
+        data=body,
         method="POST",
-        headers={"X-WX-Token": token, "Content-Length": "0"},
+        headers=headers,
     )
-    with urllib.request.urlopen(request, timeout=5) as response:
+    with urllib.request.urlopen(request, timeout=timeout) as response:
         if response.status != 200:
-            raise RuntimeError(f"Shutdown returned HTTP {response.status}.")
+            raise RuntimeError(f"Packaged request returned HTTP {response.status}.")
+        payload = response.read()
+    return json.loads(payload.decode("utf-8")) if payload else {}
 
 
 def main() -> None:
@@ -53,6 +70,8 @@ def main() -> None:
         environment.update(
             {
                 "MAGIC_FORMAT_RUNTIME_DIR": str(runtime),
+                "MAGIC_FORMAT_SETTINGS_DIR": str(Path(temporary) / "settings"),
+                "MAGIC_FORMAT_RESULTS_DIR": str(Path(temporary) / "results"),
                 "MAGIC_FORMAT_NO_BROWSER": "1",
             }
         )
@@ -80,6 +99,22 @@ def main() -> None:
                 health = json.loads(response.read().decode("utf-8"))
             if health["instance"]["activation_count"] != 2:
                 raise RuntimeError("Repeated launch did not activate the existing Helper twice.")
+            converted = post(
+                base + "/api/convert",
+                health["token"],
+                body=(
+                    "# 打包冒烟\n\n"
+                    "1. 第一项\n"
+                    "2. 第二项\n\n"
+                    "| 名称 | 状态 |\n"
+                    "| --- | --- |\n"
+                    "| Markdown | 正常 |\n"
+                ).encode("utf-8"),
+                filename="package-smoke.md",
+                timeout=30,
+            )
+            if converted.get("ok") is not True:
+                raise RuntimeError(f"Packaged Markdown conversion failed: {converted}")
             post(base + "/api/shutdown", health["token"])
             deadline = time.monotonic() + 10
             while descriptor_path.exists() and time.monotonic() < deadline:
