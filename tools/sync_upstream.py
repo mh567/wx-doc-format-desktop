@@ -26,6 +26,7 @@ MODULES = (
     "list_group_detection",
     "list_hierarchy",
     "list_style_mapping",
+    "markdown_recognition",
     "md_pipeline",
     "model_normalization",
     "note_semantics",

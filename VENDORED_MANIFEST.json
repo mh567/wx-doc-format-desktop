@@ -13,8 +13,8 @@
       "vendored_sha256": "a77ea2ca3fc7d51d207fe3e2560973df74697e64f104edae8ee4fcefffc093fc"
     },
     "document_model.py": {
-      "upstream_sha256": "71f776abffcd90bd35eb9d5033bc814d3351ff9fec94b30c759949a654b28d74",
-      "vendored_sha256": "71f776abffcd90bd35eb9d5033bc814d3351ff9fec94b30c759949a654b28d74"
+      "upstream_sha256": "25f574903c863926d51f20389be2a4e431297f57576eac67edf7f3c2bdb612a0",
+      "vendored_sha256": "25f574903c863926d51f20389be2a4e431297f57576eac67edf7f3c2bdb612a0"
     },
     "docx_pipeline.py": {
       "upstream_sha256": "90b616a398142a0d2e80a69b07af014a0e34821557676d846272de62d72051b3",
@@ -29,16 +29,16 @@
       "vendored_sha256": "86a256f1d575162de3daad7f7a374a0f9ee7e395c80ce487433877ea218b679c"
     },
     "front_matter.py": {
-      "upstream_sha256": "2e1e37bf6386634402c3efb10e8c1c02d7828e337b96ee7616f554818e0322d5",
-      "vendored_sha256": "ad16b54257973e7adfb09a0d8ae4efb929badc4432ceb9c3bb8d7794401eb210"
+      "upstream_sha256": "c917b7f5333d9609c809359cd9019ccb2cb56a7dd491aaa5ed055e55911e7f7c",
+      "vendored_sha256": "9d6bab5e5b22d2aae622a1326991596d54a988bd92e2f59735518f1ad56a1db6"
     },
     "list_detector.py": {
       "upstream_sha256": "ca6cafef3cf85132caf9cd25fdcc467e98b284a095ee7a60c87ba9b6a94ddfd1",
       "vendored_sha256": "7a329d0739bfe64878f7526757baf7d88d913a82efdb8210b28fbb55b0a5ba42"
     },
     "list_group_detection.py": {
-      "upstream_sha256": "fe1decbb72335156d1ec610565a98d07e09ae76ae743b721faf37da7479c2f76",
-      "vendored_sha256": "fe1decbb72335156d1ec610565a98d07e09ae76ae743b721faf37da7479c2f76"
+      "upstream_sha256": "494ee49f426b11d35852ed8c18fc1ee1dc53bd415bb8783d0fc1a3483651736e",
+      "vendored_sha256": "494ee49f426b11d35852ed8c18fc1ee1dc53bd415bb8783d0fc1a3483651736e"
     },
     "list_hierarchy.py": {
       "upstream_sha256": "071232296e5739228aecdf8e0f2ed1f5c63bc6a053ec642461407c7323cf7189",
@@ -48,21 +48,25 @@
       "upstream_sha256": "05a9215bdbd00fc35a6381ab54debc37cdc497ec62cd298f7023eed502c46e4c",
       "vendored_sha256": "05a9215bdbd00fc35a6381ab54debc37cdc497ec62cd298f7023eed502c46e4c"
     },
+    "markdown_recognition.py": {
+      "upstream_sha256": "46aa43fbef4d14c734d7e95ec4d1bdbcf7a80641aabf3970091cf0497e64f3a2",
+      "vendored_sha256": "2baac0c745ec01eac7564f83a99d2125cdc89ec2f5dd75c6e98ba8f1349b779e"
+    },
     "md_pipeline.py": {
-      "upstream_sha256": "86cfcd03f0b4ae027942bdf15125f54ece16b94efc9f43019eaa61be73b4cea9",
-      "vendored_sha256": "53c2dfe8f230c83c175a8cd5517b9ff1b245352d5291ba4b8bf5851a2eb2d80c"
+      "upstream_sha256": "8205cd4780a71ffe5ccee7c537ae5f17bf1fbc3df6268bf0993b5303b070e9ab",
+      "vendored_sha256": "b1d344881921d42799c776c91710094af0681951c4cf3ffbb043bee363390b67"
     },
     "model_normalization.py": {
-      "upstream_sha256": "fd9c1b372bf9fda5875756f6f73709d276d014f053bae3e1d9c523c87a1f20a4",
-      "vendored_sha256": "132614734b88c14ac2dc30ff19b9308e66b2b69554c6756d8a58a658c3ea5df2"
+      "upstream_sha256": "688491e325b149f393071db18d05a45a493b1b92d3b0c252e4693e8fc15d5bcb",
+      "vendored_sha256": "b5a3efa60d99633b59ad6e5adc8d5fb252d39cb68f3b856c035103e3808fce21"
     },
     "note_semantics.py": {
       "upstream_sha256": "28fe922e6f4861590a76fbf961f2af88cad75948e140925f2c80af1ccdc73251",
       "vendored_sha256": "28fe922e6f4861590a76fbf961f2af88cad75948e140925f2c80af1ccdc73251"
     },
     "reporting.py": {
-      "upstream_sha256": "9bb140d71fe1cc7728900d08d69f830bf176b4a58900881adbae979bd868dbb0",
-      "vendored_sha256": "9bb140d71fe1cc7728900d08d69f830bf176b4a58900881adbae979bd868dbb0"
+      "upstream_sha256": "a164ac74394990670070ca6e00609850c02050a5ecb0e69f689684843046a8bb",
+      "vendored_sha256": "a164ac74394990670070ca6e00609850c02050a5ecb0e69f689684843046a8bb"
     },
     "table_formatting.py": {
       "upstream_sha256": "a460edb8121c83bcc1611a77f2742c173ac2948c71811aa4947450960eb91e85",
@@ -81,8 +85,8 @@
       "vendored_sha256": "6e1febd3db45a9ca9cc713707b3294fba3d4b30cac45c25ba31fa82c400983a1"
     },
     "text_utils.py": {
-      "upstream_sha256": "22ffb93cdd584629b60a64f02a6e66c7df1588dce8268ee78962a21e6aa03ade",
-      "vendored_sha256": "8fc128bbd7016c7c45864761fba4d03c3309b3cd6f274056d7e43b1c9d4bda4a"
+      "upstream_sha256": "e824cb8baeacdaf14264bc574bfba7daa2aada7df12d18973f09972dbb7880c2",
+      "vendored_sha256": "c48aee88d202379f82edecd53018c9a52a1dbeb5a53a14d96787e7b0531bbfd3"
     },
     "toc_contract.py": {
       "upstream_sha256": "b536ebfc4da6b70778689b6ba27a4e5b0b72fe26ec2a74ca7aaeea030e93ad01",
@@ -97,13 +101,13 @@
       "vendored_sha256": "7747b2bbbfa400a37d266bfcbdbfee3109070d5afa55dbd5718829cb8606176e"
     },
     "word_model_renderer.py": {
-      "upstream_sha256": "059c38c028f78732d383936e04c67f4272190c6334c47bb693636364e4560944",
-      "vendored_sha256": "480b99e9e9ea326c5575d2e4b4b0c82b515edc88ad31c9ce02b804a1aa0246f1"
+      "upstream_sha256": "fae4f4012f90bdb649d69a9471f47a883e6f905a1ea7b1c675a87a5b0d03dc99",
+      "vendored_sha256": "120f09f0976efebcebd946443bfe379c02a5dc6e0a06b487367a272b4e749dbc"
     }
   },
   "template": {
     "path": "src/wxdoc_desktop/assets/wx_template.docx",
     "sha256": "3da91436d40dcd3cbfd1d5b1d38321c94785611dc78974aff4831e158fabfce5"
   },
-  "upstream_version": "0.12.17"
+  "upstream_version": "0.12.18"
 }
