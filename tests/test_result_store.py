@@ -1,6 +1,18 @@
 from pathlib import Path
 
-from wxdoc_desktop.result_store import ResultDirectorySettings, ResultNameRegistry, source_fingerprint
+from wxdoc_desktop.result_store import (
+    ResultDirectorySettings,
+    ResultNameRegistry,
+    default_result_directory,
+    source_fingerprint,
+)
+
+
+def test_macos_default_results_stay_in_application_support(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr("wxdoc_desktop.result_store.sys.platform", "darwin")
+    monkeypatch.setattr("wxdoc_desktop.result_store.Path.home", lambda: tmp_path)
+
+    assert default_result_directory() == tmp_path / "Library" / "Application Support" / "Magic Format" / "转换结果"
 
 
 def test_result_directory_setting_is_persistent_and_customizable(tmp_path: Path):

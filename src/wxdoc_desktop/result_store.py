@@ -36,6 +36,8 @@ def default_result_directory() -> Path:
     override = os.environ.get("MAGIC_FORMAT_RESULTS_DIR")
     if override:
         return Path(override).expanduser().resolve()
+    if sys.platform == "darwin":
+        return _application_data_directory() / "转换结果"
     return Path.home() / "Documents" / APP_DIRECTORY / "转换结果"
 
 
