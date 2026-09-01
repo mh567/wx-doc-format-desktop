@@ -59,6 +59,18 @@ cd "$root"
 "$venv/bin/python" -m pip install -e "$root[test,build]"
 "$venv/bin/python" -m pytest "$root/tests"
 "$venv/bin/python" "$root/tools/check_release.py" --tag "v$version"
+native_cache="/tmp/native-skill-release"
+native_archive="$native_cache/wx-doc-format-skill-$version-kylin-v10-arm64.tar.gz"
+native_checksums="$native_cache/SHA256SUMS.txt"
+mkdir -p "$native_cache"
+curl --fail --location --retry 3 \
+  "https://github.com/mh567/wx-doc-format-skill/releases/download/v$version/$(basename "$native_archive")" \
+  --output "$native_archive"
+curl --fail --location --retry 3 \
+  "https://github.com/mh567/wx-doc-format-skill/releases/download/v$version/SHA256SUMS.txt" \
+  --output "$native_checksums"
+export MAGIC_FORMAT_SKILL_ARCHIVE="$native_archive"
+export MAGIC_FORMAT_SKILL_CHECKSUMS="$native_checksums"
 "$venv/bin/python" "$root/packaging/build.py"
 "$venv/bin/python" "$root/tools/smoke_package.py"
 
