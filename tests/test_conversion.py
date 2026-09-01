@@ -7,9 +7,9 @@ from wxdoc_desktop.service import ConversionRequest, convert_document
 
 
 def test_native_runtime_stages_artifacts_before_publishing(tmp_path: Path, monkeypatch):
-    source = tmp_path / "source.md"
+    source = tmp_path / "源文档.md"
     source.write_text("# 暂存测试\n", encoding="utf-8")
-    output = tmp_path / "user-results" / "output.docx"
+    output = tmp_path / "用户结果" / "结果.docx"
     seen: dict[str, Path] = {}
 
     class StagingRuntime:
@@ -17,10 +17,14 @@ def test_native_runtime_stages_artifacts_before_publishing(tmp_path: Path, monke
         template_sha256 = "a" * 64
 
         def convert(self, source_path, staged_output, staged_report, *, strict_normalize):
-            assert source_path == source
+            assert source_path.name == "input.md"
+            assert source_path.parent != source.parent
+            assert source_path.read_text(encoding="utf-8") == source.read_text(encoding="utf-8")
             assert strict_normalize is True
-            assert staged_output != output
-            assert staged_report != output.with_suffix(".json")
+            assert staged_output.name == "output.docx"
+            assert staged_report.name == "report.json"
+            assert staged_output.parent != output.parent
+            assert staged_report.parent != output.parent
             seen["output"] = staged_output
             seen["report"] = staged_report
             staged_output.write_bytes(b"staged-docx")

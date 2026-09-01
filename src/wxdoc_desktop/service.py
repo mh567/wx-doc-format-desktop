@@ -144,10 +144,15 @@ def convert_document(request: ConversionRequest) -> ConversionResult:
     try:
         with tempfile.TemporaryDirectory(prefix="wx-doc-format-native-") as native_workspace:
             native_root = Path(native_workspace)
-            staged_output = native_root / output.name
-            staged_report = native_root / report_json.name
+            # The compiled runtime accepts only ASCII paths on macOS. Keep every
+            # path passed to it stable and ASCII, then publish artifacts under
+            # the user's requested names after conversion succeeds.
+            staged_source = native_root / f"input{source.suffix.lower()}"
+            staged_output = native_root / "output.docx"
+            staged_report = native_root / "report.json"
+            shutil.copyfile(source, staged_source)
             report = runtime.convert(
-                source,
+                staged_source,
                 staged_output,
                 staged_report,
                 strict_normalize=request.strict_normalize,
