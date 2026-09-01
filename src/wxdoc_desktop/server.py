@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 import os
 import secrets
 import sys
@@ -14,18 +15,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from . import __version__
-from .environment import (
-    choose_result_directory,
-    environment_report,
-    open_browser,
-    open_default_browser,
-    open_local_directory,
-    open_local_file,
-)
+from .environment import environment_report, open_default_browser
 from .instance import InstanceLock, RuntimeDescriptor, remove_descriptor, write_descriptor
 from .resources import static_text
-from .result_store import ResultDirectorySettings, ResultNameRegistry, source_fingerprint
-from .service import MAX_INPUT_BYTES, ConversionError, ConversionRequest, ConversionResult, convert_document
+from .service import MAX_INPUT_BYTES, ConversionError, ConversionRequest, convert_document
 
 
 class ApplicationState:
@@ -35,16 +28,12 @@ class ApplicationState:
         managed: bool = False,
         idle_timeout: float = 900.0,
         client_timeout: float = 45.0,
-        result_settings: ResultDirectorySettings | None = None,
     ) -> None:
         self.csrf_token = secrets.token_urlsafe(32)
         self.instance_token = secrets.token_urlsafe(32)
         self.workspace = tempfile.TemporaryDirectory(prefix="wx-doc-format-")
         self.root = Path(self.workspace.name)
-        self.result_settings = result_settings or ResultDirectorySettings()
-        self.result_directory = self.result_settings.load()
-        self.result_registry = ResultNameRegistry(self.result_directory)
-        self.jobs: dict[str, ConversionResult] = {}
+        self.artifacts: dict[tuple[str, str], Path] = {}
         self.lock = threading.Lock()
         self.managed = managed
         self.idle_timeout = idle_timeout
@@ -84,12 +73,6 @@ class ApplicationState:
     def busy(self) -> bool:
         with self.lock:
             return self.busy_count > 0
-
-    def set_result_directory(self, directory: Path) -> Path:
-        with self.lock:
-            self.result_directory = self.result_settings.save(directory)
-            self.result_registry = ResultNameRegistry(self.result_directory)
-            return self.result_directory
 
     @contextmanager
     def conversion(self):
@@ -172,9 +155,27 @@ class Handler(BaseHTTPRequestHandler):
                     "token": self.state.csrf_token,
                     "environment": environment_report(),
                     "instance": {"managed": self.state.managed, "activation_count": self.state.activation_count},
-                    "result_directory": str(self.state.result_directory),
                 }
             )
+            return
+        if path.startswith("/download/"):
+            parts = path.strip("/").split("/")
+            if len(parts) != 3:
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+            artifact = self.state.artifacts.get((parts[1], parts[2]))
+            if artifact is None or not artifact.is_file():
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+            body = artifact.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", mimetypes.guess_type(artifact.name)[0] or "application/octet-stream")
+            self.send_header("Content-Length", str(len(body)))
+            quoted = urllib.parse.quote(artifact.name)
+            self.send_header("Content-Disposition", f"attachment; filename*=UTF-8''{quoted}")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(body)
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -218,46 +219,6 @@ class Handler(BaseHTTPRequestHandler):
             self.state.touch(client_id)
             self._json({"ok": True})
             return
-        if path == "/api/result-directory/open":
-            action = open_local_directory(self.state.result_directory)
-            if not action.success:
-                self._json({"ok": False, "message": action.message or "无法打开结果目录。"}, 422)
-                return
-            self._json({"ok": True})
-            return
-        if path == "/api/result-directory/select":
-            directory = choose_result_directory()
-            if directory is None:
-                self._json({"ok": True, "canceled": True})
-                return
-            try:
-                selected = self.state.set_result_directory(directory)
-            except OSError as exc:
-                self._json({"ok": False, "message": str(exc)}, 422)
-                return
-            self._json({"ok": True, "result_directory": str(selected)})
-            return
-        if path.startswith("/api/jobs/"):
-            parts = path.removeprefix("/api/jobs/").split("/")
-            if len(parts) != 2 or parts[1] not in {"open-document", "reveal", "open-report"}:
-                self.send_error(HTTPStatus.NOT_FOUND)
-                return
-            with self.state.lock:
-                result = self.state.jobs.get(parts[0])
-            if result is None:
-                self._json({"ok": False, "message": "转换结果已失效，请重新转换。"}, 404)
-                return
-            if parts[1] == "open-document":
-                action = open_local_file(result.output_path)
-            elif parts[1] == "reveal":
-                action = open_local_directory(result.output_path.parent)
-            else:
-                action = open_browser(result.report_path.as_uri())
-            if not action.success:
-                self._json({"ok": False, "message": action.message or "无法打开目标。"}, 422)
-                return
-            self._json({"ok": True})
-            return
         if path != "/api/convert":
             self.send_error(HTTPStatus.NOT_FOUND)
             return
@@ -282,16 +243,11 @@ class Handler(BaseHTTPRequestHandler):
         job_dir.mkdir(mode=0o700)
         source = job_dir / ("source" + suffix)
         source.write_bytes(self.rfile.read(length))
-        try:
-            fingerprint = source_fingerprint(source)
-            with self.state.lock:
-                paths = self.state.result_registry.paths_for(filename, fingerprint)
-        except OSError as exc:
-            self._json({"ok": False, "message": f"无法准备结果目录：{exc}"}, 422)
-            return
+        output = job_dir / f"{Path(filename).stem}_WX格式.docx"
+        report = job_dir / f"{Path(filename).stem}_WX格式_报告.html"
         with self.state.conversion():
             try:
-                result = convert_document(ConversionRequest(source, paths.document, paths.report))
+                result = convert_document(ConversionRequest(source, output, report))
             except (ConversionError, OSError, ValueError) as exc:
                 self._json({"ok": False, "message": str(exc)}, 422)
                 return
@@ -300,7 +256,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
         with self.state.lock:
-            self.state.jobs[job_token] = result
+            self.state.artifacts[(job_token, "document")] = result.output_path
+            self.state.artifacts[(job_token, "report")] = result.report_path
+            self.state.artifacts[(job_token, "details")] = result.json_report_path
         self._json(
             {
                 "ok": True,
@@ -309,6 +267,11 @@ class Handler(BaseHTTPRequestHandler):
                 "warning_count": result.warning_count,
                 "warnings": [item.get("type", "review") for item in result.warnings],
                 "job": job_token,
+                "downloads": {
+                    "document": f"/download/{job_token}/document",
+                    "report": f"/download/{job_token}/report",
+                    "details": f"/download/{job_token}/details",
+                },
             }
         )
 

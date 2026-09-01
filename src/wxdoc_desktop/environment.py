@@ -54,13 +54,6 @@ class BrowserOpenResult:
     message: str = ""
 
 
-@dataclass(frozen=True)
-class LocalActionResult:
-    success: bool
-    method: str = ""
-    message: str = ""
-
-
 def _browser_subprocess_environment() -> dict[str, str]:
     environment = os.environ.copy()
     if sys.platform.startswith("linux"):
@@ -89,99 +82,6 @@ def _launch_browser_command(command: list[str], environment: dict[str, str]) -> 
         return process.wait(timeout=0.75) == 0, f"退出码 {process.returncode}"
     except subprocess.TimeoutExpired:
         return True, ""
-
-
-def _launch_local_command(command: list[str], *, capture_output: bool = False) -> tuple[bool, str]:
-    try:
-        process = subprocess.Popen(
-            command,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE if capture_output else subprocess.DEVNULL,
-            stderr=subprocess.PIPE if capture_output else subprocess.DEVNULL,
-            text=capture_output,
-            close_fds=True,
-            start_new_session=True,
-            env=_browser_subprocess_environment(),
-        )
-    except OSError as exc:
-        return False, str(exc)
-    if not capture_output:
-        return True, ""
-    stdout, stderr = process.communicate()
-    if process.returncode == 0:
-        return True, stdout
-    return False, stderr.strip() or f"退出码 {process.returncode}"
-
-
-def choose_result_directory() -> Path | None:
-    if sys.platform == "darwin":
-        success, output = _launch_local_command(
-            ["osascript", "-e", 'POSIX path of (choose folder with prompt "选择转换结果目录")'],
-            capture_output=True,
-        )
-        return Path(output.strip()).resolve() if success and output.strip() else None
-    if os.name == "nt":
-        script = (
-            "Add-Type -AssemblyName System.Windows.Forms; "
-            "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog; "
-            "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.SelectedPath }"
-        )
-        success, output = _launch_local_command(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script], capture_output=True
-        )
-        return Path(output.strip()).resolve() if success and output.strip() else None
-    environment = _browser_subprocess_environment()
-    if shutil.which("zenity", path=environment.get("PATH")):
-        success, output = _launch_local_command(
-            ["zenity", "--file-selection", "--directory", "--title=选择转换结果目录"], capture_output=True
-        )
-        return Path(output.strip()).resolve() if success and output.strip() else None
-    if shutil.which("kdialog", path=environment.get("PATH")):
-        success, output = _launch_local_command(["kdialog", "--getexistingdirectory", str(Path.home())], capture_output=True)
-        return Path(output.strip()).resolve() if success and output.strip() else None
-    return None
-
-
-def open_local_file(path: Path) -> LocalActionResult:
-    target = path.expanduser().resolve()
-    if not target.is_file():
-        return LocalActionResult(False, message="目标文件不存在。")
-    if sys.platform == "darwin":
-        command, method = ["open", str(target)], "open"
-    elif os.name == "nt":
-        command, method = ["explorer", str(target)], "explorer"
-    else:
-        command, method = ["xdg-open", str(target)], "xdg-open"
-    success, message = _launch_local_command(command)
-    return LocalActionResult(success, method if success else "", message)
-
-
-def reveal_local_file(path: Path) -> LocalActionResult:
-    target = path.expanduser().resolve()
-    if not target.is_file():
-        return LocalActionResult(False, message="目标文件不存在。")
-    if sys.platform == "darwin":
-        command, method = ["open", "-R", str(target)], "open"
-    elif os.name == "nt":
-        command, method = ["explorer", "/select," + str(target)], "explorer"
-    else:
-        command, method = ["xdg-open", str(target.parent)], "xdg-open"
-    success, message = _launch_local_command(command)
-    return LocalActionResult(success, method if success else "", message)
-
-
-def open_local_directory(path: Path) -> LocalActionResult:
-    target = path.expanduser().resolve()
-    if not target.is_dir():
-        return LocalActionResult(False, message="结果目录不存在。")
-    if sys.platform == "darwin":
-        command, method = ["open", str(target)], "open"
-    elif os.name == "nt":
-        command, method = ["explorer", str(target)], "explorer"
-    else:
-        command, method = ["xdg-open", str(target)], "xdg-open"
-    success, message = _launch_local_command(command)
-    return LocalActionResult(success, method if success else "", message)
 
 
 def open_browser(url: str) -> BrowserOpenResult:

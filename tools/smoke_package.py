@@ -59,6 +59,12 @@ def post(
     return json.loads(payload.decode("utf-8")) if payload else {}
 
 
+def get(url: str, timeout: float = 5) -> tuple[dict[str, str], bytes]:
+    request = urllib.request.Request(url, method="GET")
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return dict(response.headers.items()), response.read()
+
+
 def main() -> None:
     executable = executable_path()
     if not executable.is_file():
@@ -89,8 +95,6 @@ def main() -> None:
         environment.update(
             {
                 "MAGIC_FORMAT_RUNTIME_DIR": str(runtime),
-                "MAGIC_FORMAT_SETTINGS_DIR": str(Path(temporary) / "settings"),
-                "MAGIC_FORMAT_RESULTS_DIR": str(Path(temporary) / "results"),
                 "MAGIC_FORMAT_NO_BROWSER": "1",
             }
         )
@@ -136,6 +140,11 @@ def main() -> None:
             )
             if converted.get("ok") is not True:
                 raise RuntimeError(f"Packaged Markdown conversion failed: {converted}")
+            if set(converted.get("downloads", {})) != {"document", "report", "details"}:
+                raise RuntimeError(f"Packaged Helper did not return browser downloads: {converted}")
+            document_headers, document_body = get(base + converted["downloads"]["document"], timeout=30)
+            if not document_headers.get("Content-Disposition", "").startswith("attachment;") or not document_body:
+                raise RuntimeError("Packaged document download is incomplete.")
             post(base + "/api/shutdown", health["token"])
             deadline = time.monotonic() + 10
             while descriptor_path.exists() and time.monotonic() < deadline:

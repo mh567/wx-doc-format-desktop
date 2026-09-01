@@ -26,7 +26,6 @@ from wxdoc_desktop.instance import (
     write_descriptor,
 )
 from wxdoc_desktop.server import ApplicationState, Handler, LocalServer
-from wxdoc_desktop.result_store import ResultDirectorySettings
 
 
 @pytest.fixture
@@ -73,6 +72,15 @@ def _post(url: str, headers: dict[str, str], body: bytes = b"") -> tuple[int, di
             return response.status, json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         return exc.code, json.loads(exc.read().decode("utf-8"))
+
+
+def _get(url: str, headers: dict[str, str] | None = None) -> tuple[int, dict[str, str], bytes]:
+    request = urllib.request.Request(url, method="GET", headers=headers or {})
+    try:
+        with urllib.request.urlopen(request, timeout=2) as response:
+            return response.status, dict(response.headers.items()), response.read()
+    except urllib.error.HTTPError as exc:
+        return exc.code, dict(exc.headers.items()), exc.read()
 
 
 def test_activate_reuses_server_and_requires_instance_token(runtime_dir: Path, monkeypatch: pytest.MonkeyPatch):
@@ -185,46 +193,34 @@ def test_conversion_guard_blocks_idle_exit():
         state.close()
 
 
-def test_uploaded_document_uses_persistent_results_and_local_actions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_uploaded_document_returns_browser_downloads_from_temporary_workspace(tmp_path: Path):
     source = tmp_path / "plan.docx"
     document = Document()
     document.add_heading("项目概述", level=1)
     document.save(source)
-    settings = ResultDirectorySettings(tmp_path / "settings" / "settings.json")
-    results = settings.save(tmp_path / "results")
-    state = ApplicationState(managed=True, idle_timeout=60, result_settings=settings)
+    state = ApplicationState(managed=True, idle_timeout=60)
     server = LocalServer(("127.0.0.1", 0), Handler, state)
     thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
     thread.start()
-    opened: list[Path] = []
-    directories: list[Path] = []
-    reports: list[str] = []
-    monkeypatch.setattr("wxdoc_desktop.server.open_local_file", lambda path: opened.append(path) or BrowserOpenResult(True))
-    monkeypatch.setattr("wxdoc_desktop.server.open_local_directory", lambda path: directories.append(path) or BrowserOpenResult(True))
-    monkeypatch.setattr("wxdoc_desktop.server.open_browser", lambda url: reports.append(url) or BrowserOpenResult(True))
     headers = {"X-WX-Token": state.csrf_token, "X-WX-Filename": "plan.docx"}
     base_url = f"http://127.0.0.1:{server.server_port}"
     try:
         status, payload = _post(base_url + "/api/convert", headers, source.read_bytes())
         assert status == 200
-        output = results / "plan_WX格式.docx"
-        assert output.is_file()
-
-        repeated_status, repeated = _post(base_url + "/api/convert", headers, source.read_bytes())
-        assert repeated_status == 200
-        assert repeated["job"] != payload["job"]
-        assert output.is_file()
-
-        for action in ("open-document", "reveal", "open-report"):
-            action_status, response = _post(base_url + f"/api/jobs/{payload['job']}/{action}", {"X-WX-Token": state.csrf_token})
-            assert action_status == 200
-            assert response["ok"] is True
-        directory_status, response = _post(base_url + "/api/result-directory/open", {"X-WX-Token": state.csrf_token})
-        assert directory_status == 200
-        assert response["ok"] is True
-        assert opened == [output]
-        assert directories == [results, results]
-        assert reports == [output.with_name("plan_WX格式_报告.html").as_uri()]
+        assert set(payload["downloads"]) == {"document", "report", "details"}
+        document_status, document_headers, document_body = _get(base_url + payload["downloads"]["document"])
+        assert document_status == 200
+        assert document_headers["Content-Disposition"].startswith("attachment;")
+        assert document_body == state.artifacts[(payload["job"], "document")].read_bytes()
+        report_status, _, report_body = _get(base_url + payload["downloads"]["report"])
+        assert report_status == 200
+        assert b"<html" in report_body.lower()
+        assert state.root.resolve() in state.artifacts[(payload["job"], "document")].resolve().parents
+        health_status, _, health_body = _get(base_url + "/api/health")
+        assert health_status == 200
+        assert "result_directory" not in json.loads(health_body.decode("utf-8"))
+        removed_status, _, _ = _get(base_url + "/api/result-directory/open")
+        assert removed_status == 404
     finally:
         server.shutdown()
         server.server_close()
