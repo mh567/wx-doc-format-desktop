@@ -132,6 +132,7 @@ def test_kylin_package_has_root_launcher_and_companion_files():
     assert 'exec "$SCRIPT_DIR/MagicFormat"' in start_script
     assert "/MagicFormat\\\"" in desktop_entry
     assert 'cp -a "$root/dist/MagicFormat/." "$package_root/"' in build_script
+    assert ': > "$package_root/双击 MagicFormat 运行.txt"' in build_script
     assert 'chmod +x "$package_root/MagicFormat"' in build_script
 
 

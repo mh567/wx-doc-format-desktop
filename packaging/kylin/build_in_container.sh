@@ -81,6 +81,7 @@ mkdir -p "$package_root"
 cp -a "$root/dist/MagicFormat/." "$package_root/"
 cp "$root/packaging/kylin/start.sh" "$package_root/start.sh"
 cp "$root/packaging/kylin/MagicFormat.desktop" "$package_root/MagicFormat.desktop"
+: > "$package_root/双击 MagicFormat 运行.txt"
 chmod +x "$package_root/MagicFormat" "$package_root/MagicFormatServer" \
   "$package_root/start.sh" "$package_root/MagicFormat.desktop"
 tar -C "$root/dist" -czf "$root/wx-doc-format-$version-kylin-v10-$architecture.tar.gz" "$package_name"
