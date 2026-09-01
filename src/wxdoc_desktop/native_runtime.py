@@ -79,7 +79,7 @@ class NativeRuntime:
         environment = os.environ.copy()
         environment["WX_DOC_FORMAT_OFFLINE"] = "1"
         environment["WX_DOC_FORMAT_RELEASE"] = "1"
-        if sys.platform.startswith("linux"):
+        if sys.platform.startswith("linux") and getattr(sys, "frozen", False):
             original = environment.get("LD_LIBRARY_PATH_ORIG")
             if original is None:
                 environment.pop("LD_LIBRARY_PATH", None)

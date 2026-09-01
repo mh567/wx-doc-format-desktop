@@ -32,6 +32,13 @@ def test_native_runtime_rejects_tampered_template(native_skill_runtime: Path):
         NativeRuntime.discover()
 
 
+def test_development_runtime_preserves_linux_library_path(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr("wxdoc_desktop.native_runtime.sys.platform", "linux")
+    monkeypatch.setenv("LD_LIBRARY_PATH", "/opt/build-python/lib")
+
+    assert NativeRuntime.discover().environment()["LD_LIBRARY_PATH"] == "/opt/build-python/lib"
+
+
 def test_frontend_uses_magic_format_single_workspace():
     html = (ROOT / "src" / "wxdoc_desktop" / "static" / "index.html").read_text(encoding="utf-8")
     assert "Magic Format" in html
