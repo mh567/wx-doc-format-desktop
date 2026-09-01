@@ -9,6 +9,7 @@ from wxdoc_desktop.result_store import (
 
 
 def test_macos_default_results_stay_in_application_support(monkeypatch, tmp_path: Path):
+    monkeypatch.delenv("MAGIC_FORMAT_RESULTS_DIR", raising=False)
     monkeypatch.setattr("wxdoc_desktop.result_store.sys.platform", "darwin")
     monkeypatch.setattr("wxdoc_desktop.result_store.Path.home", lambda: tmp_path)
 
