@@ -1,7 +1,7 @@
 # 贡献指南
 
-1. 修改确定性核心前，先确认上游 `UPSTREAM_VERSION`。
-2. 核心同步只能通过 `tools/sync_upstream.py` 的允许列表执行。
+1. 更新转换能力前，先确认上游 `UPSTREAM_VERSION` 和对应 Skill Release 原生制品。
+2. Desktop 仓库不复制 Skill Python 源码，构建只消费经过校验的编译运行时。
 3. 新增行为必须补充自动测试和真实 DOCX 回归证据。
 4. 提交中不得包含内部文档、API Key、签名证书和未脱敏日志。
 5. 拉取请求应说明影响的平台、样本类型和审计不变量。

@@ -1,0 +1,66 @@
+import hashlib
+import json
+import os
+from pathlib import Path
+
+import pytest
+from docx import Document
+
+
+@pytest.fixture(autouse=True)
+def native_skill_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    root = tmp_path / "native-skill"
+    runtime = root / "runtime" / "wx-doc-format"
+    template = root / "assets" / "wx_template.docx"
+    runtime.parent.mkdir(parents=True)
+    template.parent.mkdir(parents=True)
+    document = Document()
+    document.core_properties.author = ""
+    document.core_properties.last_modified_by = ""
+    document.save(template)
+    report = {
+        "skill_version": "0.12.19",
+        "risk_warnings": [],
+        "native_marker": "called",
+        "template_finalizer": {
+            "corrections": [{"mode": "template_fragment"}],
+            "style_audit": {"unexpected_styles": []},
+        },
+    }
+    runtime.write_text(
+        f"#!{os.sys.executable}\n"
+        "import argparse, json, shutil\n"
+        "parser = argparse.ArgumentParser()\n"
+        "parser.add_argument('--version', action='store_true')\n"
+        "parser.add_argument('--input')\n"
+        "parser.add_argument('--output')\n"
+        "parser.add_argument('--template')\n"
+        "parser.add_argument('--report')\n"
+        "parser.add_argument('--strict-normalize', action='store_true')\n"
+        "parser.add_argument('--no-strict-normalize', action='store_true')\n"
+        "args = parser.parse_args()\n"
+        "if args.version:\n"
+        "    print('0.12.19')\n"
+        "else:\n"
+        "    shutil.copyfile(args.template, args.output)\n"
+        f"    payload = {json.dumps(report)!r}\n"
+        "    open(args.report, 'w', encoding='utf-8').write(payload)\n",
+        encoding="utf-8",
+    )
+    runtime.chmod(0o755)
+    (root / "VERSION").write_text("0.12.19\n", encoding="utf-8")
+    (root / "DESKTOP_RUNTIME.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "source_repository": "mh567/wx-doc-format-skill",
+                "source_version": "0.12.19",
+                "platform": "test",
+                "source_archive_sha256": "a" * 64,
+                "template_sha256": hashlib.sha256(template.read_bytes()).hexdigest(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MAGIC_FORMAT_SKILL_ROOT", str(root))
+    return root

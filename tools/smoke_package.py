@@ -63,6 +63,25 @@ def main() -> None:
     executable = executable_path()
     if not executable.is_file():
         raise SystemExit(f"Missing packaged executable: {executable}")
+    if platform.system() == "Darwin":
+        native_skill = executable.parent.parent / "Resources" / "native_skill"
+    else:
+        native_skill = executable.parent / "native_skill"
+    native_executable = native_skill / "runtime" / ("wx-doc-format.exe" if platform.system() == "Windows" else "wx-doc-format")
+    if not native_executable.is_file():
+        raise RuntimeError(f"Packaged compiled Skill runtime is missing: {native_executable}")
+    if list(native_skill.rglob("*.py")):
+        raise RuntimeError("Packaged native Skill contains forbidden Python source files.")
+    native_version = subprocess.run(
+        [str(native_executable), "--version"],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=20,
+    ).stdout.strip()
+    expected_version = (ROOT / "UPSTREAM_VERSION").read_text(encoding="utf-8").strip()
+    if native_version != expected_version:
+        raise RuntimeError(f"Packaged native Skill version mismatch: {native_version} != {expected_version}")
 
     with tempfile.TemporaryDirectory(prefix="magic-format-package-smoke-") as temporary:
         runtime = Path(temporary) / "runtime"
@@ -99,6 +118,8 @@ def main() -> None:
                 health = json.loads(response.read().decode("utf-8"))
             if health["instance"]["activation_count"] != 2:
                 raise RuntimeError("Repeated launch did not activate the existing Helper twice.")
+            if health["environment"].get("engine_mode") != "native-runtime":
+                raise RuntimeError(f"Packaged Helper is not using the native runtime: {health['environment']}")
             converted = post(
                 base + "/api/convert",
                 health["token"],

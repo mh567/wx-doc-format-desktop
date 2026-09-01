@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import tomllib
 from pathlib import Path
@@ -24,16 +23,13 @@ def main() -> None:
     args = parser.parse_args()
 
     version = _read(ROOT / "VERSION")
-    manifest = json.loads((ROOT / "VENDORED_MANIFEST.json").read_text(encoding="utf-8"))
     version_module: dict[str, object] = {}
     exec((ROOT / "src" / "wxdoc_desktop" / "_version.py").read_text(encoding="utf-8"), version_module)
 
     observed = {
         "VERSION": version,
         "UPSTREAM_VERSION": _read(ROOT / "UPSTREAM_VERSION"),
-        "engine_version": _read(ROOT / "src" / "wxdoc_core" / "engine_version.txt"),
         "application_version": version_module["__version__"],
-        "manifest_version": manifest["upstream_version"],
     }
     if not VERSION_PATTERN.fullmatch(version):
         raise SystemExit(f"Invalid VERSION: {version!r}")
@@ -44,17 +40,14 @@ def main() -> None:
         raise SystemExit(f"Tag {args.tag!r} must equal v{version}")
 
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    kylin_build = (ROOT / "packaging" / "kylin" / "build_in_container.sh").read_text(encoding="utf-8")
-    missing_kylin_dependencies = [
-        dependency
-        for dependency in project.get("dependencies", [])
-        if dependency not in kylin_build
-    ]
-    if missing_kylin_dependencies:
-        raise SystemExit(
-            "Kylin wheelhouse is missing runtime dependencies: "
-            + ", ".join(missing_kylin_dependencies)
-        )
+    if project.get("dependencies"):
+        raise SystemExit("Desktop runtime dependencies must remain empty; the compiled Skill owns document dependencies")
+    if list((ROOT / "src" / "wxdoc_core").glob("*.py")) or (ROOT / "tools" / "sync_upstream.py").exists():
+        raise SystemExit("Vendored Skill Python sources are forbidden in the Desktop repository")
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    unsupported = [name for name in ("windows-x86_64", "kylin-v10-x86_64") if name in workflow]
+    if unsupported:
+        raise SystemExit("Release workflow includes platforms without compiled Skill runtimes: " + ", ".join(unsupported))
     print(f"Version contract verified: {version}")
 
 

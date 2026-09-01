@@ -13,9 +13,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from wxdoc_core import engine_version
-
 from . import __version__
+from .native_runtime import NativeRuntime
 from .resources import template_sha256, verified_template
 
 
@@ -256,6 +255,7 @@ def _browser_available() -> bool:
 
 
 def environment_report() -> dict:
+    runtime = NativeRuntime.discover()
     template_ok = False
     try:
         with verified_template():
@@ -264,7 +264,9 @@ def environment_report() -> dict:
         template_ok = False
     return {
         "application_version": __version__,
-        "engine_version": engine_version(),
+        "engine_version": runtime.version,
+        "engine_mode": "native-runtime",
+        "native_runtime": str(runtime.executable),
         "template_sha256": template_sha256(),
         "template_verified": template_ok,
         "system": platform.system(),

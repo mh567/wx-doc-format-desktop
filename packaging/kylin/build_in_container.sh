@@ -19,8 +19,6 @@ mkdir -p "$wheelhouse"
 "$bootstrap_python" -m pip download --dest "$wheelhouse" \
   "setuptools>=77" \
   wheel \
-  "lxml==6.1.1" \
-  "markdown-it-py==4.2.0" \
   "python-docx==1.2.0" \
   "pyinstaller==6.21.0" \
   "pytest==9.1.1"
@@ -62,6 +60,7 @@ cd "$root"
 "$venv/bin/python" -m pytest "$root/tests"
 "$venv/bin/python" "$root/tools/check_release.py" --tag "v$version"
 "$venv/bin/python" "$root/packaging/build.py"
+"$venv/bin/python" "$root/tools/smoke_package.py"
 
 package_name="MagicFormat-$version"
 package_root="$root/dist/$package_name"

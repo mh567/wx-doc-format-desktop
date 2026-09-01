@@ -10,15 +10,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 authors = [{name = "WX Doc Format contributors"}]
-dependencies = [
-  "lxml==6.1.1",
-  "markdown-it-py==4.2.0",
-  "python-docx==1.2.0",
-]
+dependencies = []
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: MacOS X",
-  "Environment :: Win32 (MS Windows)",
   "Environment :: X11 Applications",
   "Programming Language :: Python :: 3",
   "Topic :: Office/Business",
@@ -26,7 +21,7 @@ classifiers = [
 
 [project.optional-dependencies]
 build = ["pyinstaller==6.21.0"]
-test = ["pytest==9.1.1"]
+test = ["pytest==9.1.1", "python-docx==1.2.0"]
 
 [project.scripts]
 wx-doc-format = "wxdoc_desktop.cli:main"
@@ -38,8 +33,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-wxdoc_core = ["engine_version.txt"]
-wxdoc_desktop = ["assets/*", "static/*"]
+wxdoc_desktop = ["static/*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "wxdoc_desktop.__version__"}

@@ -5,8 +5,6 @@ Magic Format 用于在本机完成 DOCX、Markdown 文档的解析、规范化�
 ## 首发平台
 
 - macOS Apple Silicon arm64
-- Windows 10/11 x86_64
-- 银河麒麟 V10 x86_64
 - 银河麒麟 V10 arm64
 
 ## 使用
@@ -19,6 +17,7 @@ Magic Format 用于在本机完成 DOCX、Markdown 文档的解析、规范化�
 python -m venv .venv
 . .venv/bin/activate
 python -m pip install -e .
+export MAGIC_FORMAT_SKILL_ROOT=/path/to/extracted/compiled-skill
 wx-doc-format
 ```
 
@@ -56,15 +55,15 @@ python packaging/build.py
 
 ## 版本与同步
 
-桌面应用版本与 `wx-doc-format-skill` 的 `VERSION` 保持一致。更新 Skill 后，在桌面版仓库执行：
+桌面应用嵌入 `wx-doc-format-skill` Release 中已经编译并通过 SHA256 校验的原生运行时。应用版本与 `UPSTREAM_VERSION` 保持一致。更新 Skill 后执行：
 
 ```bash
-python tools/sync_upstream.py --source /path/to/wx-doc-format-skill
 python tools/check_release.py
 pytest
+python packaging/build.py
 ```
 
-同步命令会更新确定性核心、内置模板、应用版本、规则版本和文件哈希清单。推送同版本标签后，GitHub Actions 会构建四个平台发布包并汇总到同一个 Release。
+构建命令会从 `mh567/wx-doc-format-skill` 的同版本 Release 下载当前平台离线包，核对 `SHA256SUMS.txt` 和包内 `manifest.json`，再把 `runtime/` 与模板嵌入 Desktop 程序。当前 Release 只生成已有编译运行时的 macOS ARM64 和银河麒麟 V10 ARM64 安装包。
 
 ## 许可
 
