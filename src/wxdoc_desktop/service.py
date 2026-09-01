@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import html
 import json
+import os
+import shutil
+import tempfile
 import zipfile
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -118,6 +121,18 @@ def _write_html_report(report: dict, path: Path, source: Path, output: Path) -> 
     path.write_text(markup, encoding="utf-8")
 
 
+def _publish_native_artifact(staged: Path, destination: Path) -> None:
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{destination.name}.", dir=destination.parent)
+    os.close(descriptor)
+    temporary = Path(temporary_name)
+    try:
+        shutil.copyfile(staged, temporary)
+        shutil.copymode(staged, temporary)
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def convert_document(request: ConversionRequest) -> ConversionResult:
     source = validate_input(request.input_path)
     output = (request.output_path or default_output_path(source)).expanduser().resolve()
@@ -127,16 +142,26 @@ def convert_document(request: ConversionRequest) -> ConversionResult:
     report_html.parent.mkdir(parents=True, exist_ok=True)
     runtime = NativeRuntime.discover()
     try:
-        report = runtime.convert(
-            source,
-            output,
-            report_json,
-            strict_normalize=request.strict_normalize,
-        )
+        with tempfile.TemporaryDirectory(prefix="wx-doc-format-native-") as native_workspace:
+            native_root = Path(native_workspace)
+            staged_output = native_root / output.name
+            staged_report = native_root / report_json.name
+            report = runtime.convert(
+                source,
+                staged_output,
+                staged_report,
+                strict_normalize=request.strict_normalize,
+            )
+            _publish_native_artifact(staged_output, output)
+            _publish_native_artifact(staged_report, report_json)
     except NativeRuntimeError as exc:
         output.unlink(missing_ok=True)
         report_json.unlink(missing_ok=True)
         raise ConversionError(str(exc)) from exc
+    except OSError as exc:
+        output.unlink(missing_ok=True)
+        report_json.unlink(missing_ok=True)
+        raise ConversionError(f"无法写入转换结果：{exc}") from exc
     report["application"] = {
         "version": __version__,
         "engine_version": runtime.version,

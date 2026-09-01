@@ -6,6 +6,40 @@ from docx import Document
 from wxdoc_desktop.service import ConversionRequest, convert_document
 
 
+def test_native_runtime_stages_artifacts_before_publishing(tmp_path: Path, monkeypatch):
+    source = tmp_path / "source.md"
+    source.write_text("# 暂存测试\n", encoding="utf-8")
+    output = tmp_path / "user-results" / "output.docx"
+    seen: dict[str, Path] = {}
+
+    class StagingRuntime:
+        version = "0.12.19"
+        template_sha256 = "a" * 64
+
+        def convert(self, source_path, staged_output, staged_report, *, strict_normalize):
+            assert source_path == source
+            assert strict_normalize is True
+            assert staged_output != output
+            assert staged_report != output.with_suffix(".json")
+            seen["output"] = staged_output
+            seen["report"] = staged_report
+            staged_output.write_bytes(b"staged-docx")
+            staged_report.write_text(
+                json.dumps({"skill_version": self.version, "risk_warnings": []}),
+                encoding="utf-8",
+            )
+            return {"skill_version": self.version, "risk_warnings": []}
+
+    monkeypatch.setattr("wxdoc_desktop.service.NativeRuntime.discover", lambda: StagingRuntime())
+
+    result = convert_document(ConversionRequest(source, output))
+
+    assert output.read_bytes() == b"staged-docx"
+    assert result.json_report_path.is_file()
+    assert seen["output"].parent != output.parent
+    assert seen["report"].parent != output.parent
+
+
 def test_conversion_uses_embedded_native_skill_runtime(tmp_path: Path):
     source = tmp_path / "source.md"
     source.write_text("# 原生运行时接入测试\n", encoding="utf-8")
