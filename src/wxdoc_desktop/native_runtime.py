@@ -15,6 +15,9 @@ class NativeRuntimeError(RuntimeError):
     pass
 
 
+PUBLIC_SUMMARY_SCHEMA = "1.0"
+
+
 @dataclass(frozen=True)
 class NativeRuntime:
     root: Path
@@ -127,6 +130,7 @@ class NativeRuntime:
             report = json.loads(report_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             raise NativeRuntimeError("无法读取原生转换报告。") from exc
-        if report.get("skill_version") != self.version:
-            raise NativeRuntimeError("原生转换报告版本与应用版本不一致。")
+        summary = report.get("public_summary")
+        if not isinstance(summary, dict) or summary.get("schema_version") != PUBLIC_SUMMARY_SCHEMA:
+            raise NativeRuntimeError("原生转换报告缺少可用的公开摘要。")
         return report

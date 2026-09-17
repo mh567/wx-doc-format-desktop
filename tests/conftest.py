@@ -22,12 +22,20 @@ def native_skill_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
     document.core_properties.last_modified_by = ""
     document.save(template)
     report = {
-        "skill_version": VERSION,
-        "risk_warnings": [],
         "native_marker": "called",
-        "template_finalizer": {
-            "corrections": [{"mode": "template_fragment"}],
-            "style_audit": {"unexpected_styles": []},
+        "status": "completed",
+        "public_summary": {
+            "schema_version": "1.0",
+            "status": "completed",
+            "audits": {
+                "audit": "not_run",
+                "model_audit": "passed",
+                "saved_output_audit": "passed",
+                "appendix_preservation_audit": "passed",
+            },
+            "unexpected_styles_count": 0,
+            "manual_review_required": False,
+            "diagnostic_codes": [],
         },
     }
     runtime.write_text(

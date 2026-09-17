@@ -91,22 +91,62 @@ def validate_input(path: Path) -> Path:
     return source
 
 
-def _risk_label(risk_type: str) -> str:
-    return {
-        "media_not_fully_preserved": "图片或媒体需复核",
-        "non_text_objects": "文本框或复杂对象需复核",
-        "document_model_diff": "文档结构发生规范化调整",
-        "template_layout": "目录、页码或分节需 WPS/Word 复核",
-        "template_styles": "发现模板外样式",
-        "caption_placement": "题注位置需复核",
-    }.get(risk_type, "建议复核该文档")
+_AUDIT_MESSAGES = {
+    "model_audit": "文档模型审计未通过",
+    "saved_output_audit": "输出文档审计未通过",
+    "appendix_preservation_audit": "附录保真审计未通过",
+}
+
+_DIAGNOSTIC_MESSAGES = {
+    "source_heading_level_normalized": "标题层级已按大纲契约归一，建议复核标题层级",
+    "markdown_title_generated": "源文档缺少一级标题，已按文件名生成文档标题",
+    "unresolved_list_parent": "存在无法确定层级的列表，相关列表未套用列项样式",
+    "render_plan_list_mismatch": "列表渲染结果与渲染计划不一致",
+    "caption_target_missing": "题注缺少对应的表格或图片",
+    "caption_placement_violation": "题注位置与模板契约不符",
+    "external_resource_unresolved": "存在无法解析的外部资源",
+    "protected_target": "受保护内容发生了变化",
+    "opaque_node_skipped": "存在无法重建的行内对象，已按源引用保留",
+}
+
+
+def _summary_warnings(report: dict) -> tuple[dict, ...]:
+    """Translate the compiled Skill's public summary into review items."""
+
+    summary = report.get("public_summary") or {}
+    items: list[dict] = []
+    for name, observed in sorted((summary.get("audits") or {}).items()):
+        if observed == "failed":
+            items.append(
+                {
+                    "type": str(name),
+                    "message": _AUDIT_MESSAGES.get(str(name), "文档审计未通过"),
+                }
+            )
+    style_count = summary.get("unexpected_styles_count")
+    if isinstance(style_count, int) and style_count > 0:
+        items.append(
+            {
+                "type": "unexpected_styles",
+                "message": f"发现 {style_count} 处模板外样式",
+            }
+        )
+    for code in summary.get("diagnostic_codes") or []:
+        text = str(code)
+        items.append(
+            {
+                "type": text,
+                "message": _DIAGNOSTIC_MESSAGES.get(text, "转换过程记录了需人工关注的诊断"),
+            }
+        )
+    return tuple(items)
 
 
 def _write_html_report(report: dict, path: Path, source: Path, output: Path) -> None:
     warnings = report.get("risk_warnings", [])
     warning_items = "".join(
-        f"<li><strong>{html.escape(_risk_label(str(item.get('type', ''))))}</strong>"
-        f"<span>{html.escape(str(item.get('message', '')))}</span></li>"
+        f"<li><strong>{html.escape(str(item.get('message', '')))}</strong>"
+        f"<span>{html.escape(str(item.get('type', '')))}</span></li>"
         for item in warnings
     ) or "<li><strong>未发现需复核项</strong><span>已通过自动结构与样式审计。</span></li>"
     status = "已完成，建议复核" if warnings else "已完成"
@@ -174,11 +214,13 @@ def convert_document(request: ConversionRequest) -> ConversionResult:
         "template_sha256": runtime.template_sha256,
         "offline": True,
     }
+    warnings = _summary_warnings(report)
+    report["risk_warnings"] = [dict(item) for item in warnings]
     report_json.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     _write_html_report(report, report_html, source, output)
-    warnings = tuple(report.get("risk_warnings", []))
+    summary = report.get("public_summary") or {}
     return ConversionResult(
-        status="review" if warnings else "completed",
+        status="review" if summary.get("manual_review_required") else "completed",
         input_path=source,
         output_path=output,
         report_path=report_html,
