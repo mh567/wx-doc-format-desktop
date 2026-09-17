@@ -7,6 +7,9 @@ import pytest
 from docx import Document
 
 
+VERSION = (Path(__file__).parents[1] / "VERSION").read_text(encoding="utf-8").strip()
+
+
 @pytest.fixture(autouse=True)
 def native_skill_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "native-skill"
@@ -19,7 +22,7 @@ def native_skill_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
     document.core_properties.last_modified_by = ""
     document.save(template)
     report = {
-        "skill_version": "0.12.19",
+        "skill_version": VERSION,
         "risk_warnings": [],
         "native_marker": "called",
         "template_finalizer": {
@@ -40,7 +43,7 @@ def native_skill_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
         "parser.add_argument('--no-strict-normalize', action='store_true')\n"
         "args = parser.parse_args()\n"
         "if args.version:\n"
-        "    print('0.12.19')\n"
+        f"    print('{VERSION}')\n"
         "else:\n"
         "    shutil.copyfile(args.template, args.output)\n"
         f"    payload = {json.dumps(report)!r}\n"
@@ -48,13 +51,13 @@ def native_skill_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
         encoding="utf-8",
     )
     runtime.chmod(0o755)
-    (root / "VERSION").write_text("0.12.19\n", encoding="utf-8")
+    (root / "VERSION").write_text(f"{VERSION}\n", encoding="utf-8")
     (root / "DESKTOP_RUNTIME.json").write_text(
         json.dumps(
             {
                 "schema_version": 1,
                 "source_repository": "mh567/wx-doc-format-skill",
-                "source_version": "0.12.19",
+                "source_version": VERSION,
                 "platform": "test",
                 "source_archive_sha256": "a" * 64,
                 "template_sha256": hashlib.sha256(template.read_bytes()).hexdigest(),

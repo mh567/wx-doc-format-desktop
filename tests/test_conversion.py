@@ -6,6 +6,9 @@ from docx import Document
 from wxdoc_desktop.service import ConversionRequest, convert_document
 
 
+VERSION = (Path(__file__).parents[1] / "VERSION").read_text(encoding="utf-8").strip()
+
+
 def test_native_runtime_stages_artifacts_before_publishing(tmp_path: Path, monkeypatch):
     source = tmp_path / "源文档.md"
     source.write_text("# 暂存测试\n", encoding="utf-8")
@@ -13,7 +16,7 @@ def test_native_runtime_stages_artifacts_before_publishing(tmp_path: Path, monke
     seen: dict[str, Path] = {}
 
     class StagingRuntime:
-        version = "0.12.19"
+        version = VERSION
         template_sha256 = "a" * 64
 
         def convert(self, source_path, staged_output, staged_report, *, strict_normalize):
@@ -53,7 +56,7 @@ def test_conversion_uses_embedded_native_skill_runtime(tmp_path: Path):
 
     assert report["native_marker"] == "called"
     assert report["application"]["engine_mode"] == "native-runtime"
-    assert result.engine_version == "0.12.19"
+    assert result.engine_version == VERSION
 
 
 def test_docx_conversion_writes_document_and_reports(tmp_path: Path):

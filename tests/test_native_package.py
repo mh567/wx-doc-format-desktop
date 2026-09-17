@@ -10,10 +10,11 @@ from docx import Document
 
 
 ROOT = Path(__file__).parents[1]
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 
 def test_prepare_native_skill_verifies_and_extracts_release_archive(tmp_path: Path):
-    package_root = tmp_path / "fixture" / "wx-doc-format-skill-0.12.19-macos-arm64"
+    package_root = tmp_path / "fixture" / f"wx-doc-format-skill-{VERSION}-macos-arm64"
     executable = package_root / "runtime" / "wx-doc-format"
     template = package_root / "assets" / "wx_template.docx"
     executable.parent.mkdir(parents=True)
@@ -23,7 +24,7 @@ def test_prepare_native_skill_verifies_and_extracts_release_archive(tmp_path: Pa
     document.core_properties.author = "private-author"
     document.core_properties.last_modified_by = "private-editor"
     document.save(template)
-    (package_root / "VERSION").write_text("0.12.19\n", encoding="utf-8")
+    (package_root / "VERSION").write_text(f"{VERSION}\n", encoding="utf-8")
     files = []
     for path in (package_root / "VERSION", executable, template):
         files.append(
@@ -38,14 +39,14 @@ def test_prepare_native_skill_verifies_and_extracts_release_archive(tmp_path: Pa
             {
                 "schema_version": 1,
                 "product": "wx-doc-format-skill",
-                "version": "0.12.19",
+                "version": VERSION,
                 "platform": "macos-arm64",
                 "files": files,
             }
         ),
         encoding="utf-8",
     )
-    archive = tmp_path / "wx-doc-format-skill-0.12.19-macos-arm64.tar.gz"
+    archive = tmp_path / f"wx-doc-format-skill-{VERSION}-macos-arm64.tar.gz"
     with tarfile.open(archive, "w:gz") as bundle:
         bundle.add(package_root, arcname=package_root.name)
     checksums = tmp_path / "SHA256SUMS.txt"
@@ -66,7 +67,7 @@ def test_prepare_native_skill_verifies_and_extracts_release_archive(tmp_path: Pa
             "--output-dir",
             str(output),
             "--version",
-            "0.12.19",
+            VERSION,
             "--platform",
             "macos-arm64",
         ],
