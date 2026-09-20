@@ -1,3 +1,3 @@
 """Generated from the upstream Skill VERSION file."""
 
-__version__ = "0.16.1"
+__version__ = "0.17.3"
