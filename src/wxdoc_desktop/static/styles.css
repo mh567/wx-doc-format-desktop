@@ -118,6 +118,8 @@ button { color: inherit; }
 .issue-meta { color: var(--muted); font-size: 11px; word-break: break-word; }
 .issue-suggestion { font-size: 12px; line-height: 1.75; }
 .issue-suggestion::before { content: "整改："; color: var(--accent-dark); font-weight: 650; }
+.issue-locations-title { color: var(--muted); font-size: 11px; }
+.issue-location-list { margin: 0; padding-left: 18px; display: grid; gap: 3px; color: var(--muted); font-size: 11px; word-break: break-word; }
 
 .compliant-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
 .compliant-list li { padding: 9px 14px; border-radius: 11px; background: var(--accent-soft); color: var(--accent-dark); font-size: 12px; }

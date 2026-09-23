@@ -230,13 +230,34 @@ function buildScoreHero(result, color) {
   return hero;
 }
 
-function buildIssueSummary(summary) {
+function severityCounts(issues, summary) {
+  const counts = {};
+  for (const level of SEVERITY_ORDER) counts[level] = 0;
+  if (Array.isArray(issues) && issues.length) {
+    for (const issue of issues) {
+      counts[SEVERITY_ORDER.includes(issue.level) ? issue.level : "low"] += 1;
+    }
+    return counts;
+  }
+  for (const level of SEVERITY_ORDER) counts[level] = Number(summary?.[level] ?? 0) || 0;
+  return counts;
+}
+
+function occurrenceTotal(issues) {
+  if (!Array.isArray(issues)) return 0;
+  return issues.reduce((total, issue) => total + (Number(issue?.count) > 0 ? Number(issue.count) : 1), 0);
+}
+
+function buildIssueSummary(summary, issues) {
   const row = makeElement("div", "issue-summary");
+  const counts = severityCounts(issues, summary);
   for (const level of SEVERITY_ORDER) {
     const chip = makeElement("span", "", `${SEVERITY_LABELS[level]} `);
-    chip.appendChild(makeElement("b", "", String(summary[level] ?? 0)));
+    chip.appendChild(makeElement("b", "", String(counts[level])));
     row.appendChild(chip);
   }
+  const total = occurrenceTotal(issues);
+  if (total > 0) row.appendChild(makeElement("span", "issue-summary-note", `共 ${total} 处`));
   return row;
 }
 
@@ -264,9 +285,20 @@ function buildIssues(issues) {
     const level = SEVERITY_ORDER.includes(issue.level) ? issue.level : "low";
     const card = makeElement("div", `issue ${level}`);
     card.appendChild(makeElement("div", "issue-title", issue.title || issue.code || "未命名问题"));
+    const locations = Array.isArray(issue.locations) ? issue.locations.filter(Boolean) : [];
+    const count = Number(issue.count) > 0 ? Number(issue.count) : (locations.length || 1);
     const meta = [SEVERITY_LABELS[level]];
     if (issue.location) meta.push(issue.location);
     card.appendChild(makeElement("div", "issue-meta", meta.join(" · ")));
+    if (locations.length > 1) {
+      card.appendChild(makeElement("div", "issue-locations-title", `位置（共 ${count} 处）`));
+      const locList = makeElement("ul", "issue-location-list");
+      for (const location of locations) locList.appendChild(makeElement("li", "", location));
+      if (count > locations.length) {
+        locList.appendChild(makeElement("li", "", `（其余 ${count - locations.length} 处从略）`));
+      }
+      card.appendChild(locList);
+    }
     if (issue.suggestion) card.appendChild(makeElement("div", "issue-suggestion", issue.suggestion));
     list.appendChild(card);
   }
@@ -284,8 +316,9 @@ function renderReviewResult() {
   const color = gradeColor(result.grade, Number(result.score) || 0);
   reviewResult.appendChild(buildScoreHero(result, color));
 
-  if (Number(result.summary?.total_issues) > 0) {
-    reviewResult.appendChild(buildIssueSummary(result.summary || {}));
+  const issues = Array.isArray(result.issues) ? result.issues : [];
+  if (Number(result.summary?.total_issues) > 0 || issues.length) {
+    reviewResult.appendChild(buildIssueSummary(result.summary || {}, issues));
   }
 
   const dimensions = result.dimension_scores || {};
@@ -294,7 +327,6 @@ function renderReviewResult() {
     reviewResult.appendChild(buildDimensions(dimensions));
   }
 
-  const issues = Array.isArray(result.issues) ? result.issues : [];
   reviewResult.appendChild(makeElement("h2", "review-block-title", "问题清单"));
   if (issues.length) {
     reviewResult.appendChild(buildIssues(issues));

@@ -82,6 +82,9 @@ def test_review_document_returns_score_and_writes_reports(tmp_path: Path):
     assert result.grade == "良"
     assert result.passed is True
     assert result.issue_count == 2
+    assert result.issues[0]["locations"] == ["第2章 系统设计 · 第1段", "第2章 系统设计 · 第3段"]
+    assert result.issues[0]["count"] == 2
+    assert result.summary["issue_types"] == 2
     assert result.dimension_scores["format_conformance"] == 84.0
     assert result.risk_warnings == ("存在 1 个高优先级问题，建议立即修复",)
     assert result.report_path.is_file()
@@ -177,3 +180,5 @@ def test_frontend_exposes_review_tab_and_score():
     assert "/api/review" in app
     assert "score-ring" in styles
     assert "dimension_scores" in app
+    assert "issue.locations" in app
+    assert "issue-location-list" in styles
