@@ -6,7 +6,15 @@ import sys
 from pathlib import Path
 
 from .environment import environment_report, write_environment_report
-from .service import ConversionError, ConversionRequest, convert_document, default_output_path
+from .service import (
+    ConversionError,
+    ConversionRequest,
+    ReviewRequest,
+    convert_document,
+    default_output_path,
+    default_review_paths,
+    review_document,
+)
 
 
 def _convert(args: argparse.Namespace) -> int:
@@ -31,6 +39,34 @@ def _convert(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def _review(args: argparse.Namespace) -> int:
+    report_dir = args.report_dir.expanduser().resolve() if args.report_dir else None
+    results = []
+    failed = False
+    for input_path in args.inputs:
+        try:
+            report_json, report_markdown, report_html = default_review_paths(input_path, report_dir)
+            result = review_document(
+                ReviewRequest(
+                    input_path=input_path,
+                    report_path=report_json,
+                    markdown_path=report_markdown,
+                    html_path=report_html,
+                )
+            )
+            results.append(result.to_dict())
+            if not args.json:
+                print(f"审查完成：{result.score}/100（{result.grade}）: {result.report_path}")
+        except (ConversionError, OSError, ValueError) as exc:
+            failed = True
+            results.append({"status": "failed", "input_path": str(input_path), "message": str(exc)})
+            if not args.json:
+                print(f"审查失败: {input_path}: {exc}", file=sys.stderr)
+    if args.json:
+        print(json.dumps(results, ensure_ascii=False, indent=2))
+    return 1 if failed else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="magic-format", description="Magic Format 文档格式转换")
     subparsers = parser.add_subparsers(dest="command")
@@ -40,6 +76,12 @@ def build_parser() -> argparse.ArgumentParser:
     convert.add_argument("--output-dir", type=Path)
     convert.add_argument("--json", action="store_true", help="以 JSON 输出结果")
     convert.set_defaults(handler=_convert)
+
+    review = subparsers.add_parser("review", help="审查 DOCX 是否符合模板要求并打分")
+    review.add_argument("inputs", nargs="+", type=Path)
+    review.add_argument("--report-dir", type=Path)
+    review.add_argument("--json", action="store_true", help="以 JSON 输出结果")
+    review.set_defaults(handler=_review)
 
     serve = subparsers.add_parser("serve", help="启动本地操作界面")
     serve.add_argument("--no-browser", action="store_true")

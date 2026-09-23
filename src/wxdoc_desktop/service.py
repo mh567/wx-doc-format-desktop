@@ -58,6 +58,53 @@ def default_output_path(source: Path, output_dir: Path | None = None) -> Path:
     return directory / f"{source.stem}_WX格式.docx"
 
 
+@dataclass(frozen=True)
+class ReviewRequest:
+    input_path: Path
+    report_path: Path | None = None
+    markdown_path: Path | None = None
+    html_path: Path | None = None
+    display_name: str | None = None
+
+
+@dataclass(frozen=True)
+class ReviewResult:
+    input_path: Path
+    report_path: Path
+    markdown_path: Path
+    html_path: Path
+    score: float
+    grade: str
+    passed: bool
+    dimension_scores: dict
+    summary: dict
+    issues: tuple[dict, ...]
+    compliant_items: tuple[str, ...]
+    risk_warnings: tuple[str, ...]
+    application_version: str
+    engine_version: str
+    template_sha256: str
+
+    @property
+    def issue_count(self) -> int:
+        return len(self.issues)
+
+    def to_dict(self) -> dict:
+        data = asdict(self)
+        for key in ("input_path", "report_path", "markdown_path", "html_path"):
+            data[key] = str(data[key])
+        for key in ("issues", "compliant_items", "risk_warnings"):
+            data[key] = list(data[key])
+        data["issue_count"] = self.issue_count
+        return data
+
+
+def default_review_paths(source: Path, report_dir: Path | None = None) -> tuple[Path, Path, Path]:
+    directory = report_dir or source.parent
+    stem = f"{source.stem}_审查报告"
+    return directory / f"{stem}.json", directory / f"{stem}.md", directory / f"{stem}.html"
+
+
 def _validate_docx_archive(path: Path) -> None:
     try:
         with zipfile.ZipFile(path) as archive:
@@ -231,3 +278,74 @@ def convert_document(request: ConversionRequest) -> ConversionResult:
         engine_version=runtime.version,
         template_sha256=runtime.template_sha256,
     )
+
+
+def review_document(request: ReviewRequest) -> ReviewResult:
+    source = validate_input(request.input_path)
+    if source.suffix.lower() != ".docx":
+        raise ConversionError("审查仅支持 .docx 文件。")
+    default_json, default_markdown, default_html = default_review_paths(source)
+    report_json = (request.report_path or default_json).expanduser().resolve()
+    report_markdown = (request.markdown_path or default_markdown).expanduser().resolve()
+    report_html = (request.html_path or default_html).expanduser().resolve()
+    for path in (report_json, report_markdown, report_html):
+        path.parent.mkdir(parents=True, exist_ok=True)
+    runtime = NativeRuntime.discover()
+    try:
+        with tempfile.TemporaryDirectory(prefix="wx-doc-format-native-") as native_workspace:
+            native_root = Path(native_workspace)
+            # The compiled runtime accepts only ASCII paths on macOS, so every
+            # path handed to it stays stable and ASCII. Artifacts are published
+            # under the user's names after the review succeeds.
+            staged_source = native_root / "input.docx"
+            staged_json = native_root / "review.json"
+            staged_markdown = native_root / "review.md"
+            staged_html = native_root / "review.html"
+            shutil.copyfile(source, staged_source)
+            report = runtime.review(
+                staged_source,
+                report_path=staged_json,
+                markdown_path=staged_markdown,
+                html_path=staged_html,
+            )
+            _publish_native_artifact(staged_json, report_json)
+            _publish_native_artifact(staged_markdown, report_markdown)
+            _publish_native_artifact(staged_html, report_html)
+    except NativeRuntimeError as exc:
+        _unlink_review_outputs(report_json, report_markdown, report_html)
+        raise ConversionError(str(exc)) from exc
+    except OSError as exc:
+        _unlink_review_outputs(report_json, report_markdown, report_html)
+        raise ConversionError(f"无法写入审查结果：{exc}") from exc
+    report["application"] = {
+        "version": __version__,
+        "engine_version": runtime.version,
+        "engine_mode": "native-runtime",
+        "template_sha256": runtime.template_sha256,
+        "offline": True,
+    }
+    report["input_file"] = request.display_name or source.name
+    report["template_file"] = runtime.template.name
+    report_json.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return ReviewResult(
+        input_path=source,
+        report_path=report_json,
+        markdown_path=report_markdown,
+        html_path=report_html,
+        score=float(report.get("score", 0)),
+        grade=str(report.get("grade", "unknown")),
+        passed=bool(report.get("passed", False)),
+        dimension_scores=dict(report.get("dimension_scores") or {}),
+        summary=dict(report.get("summary") or {}),
+        issues=tuple(report.get("issues") or ()),
+        compliant_items=tuple(str(item) for item in report.get("compliant_items") or ()),
+        risk_warnings=tuple(str(item) for item in report.get("risk_warnings") or ()),
+        application_version=__version__,
+        engine_version=runtime.version,
+        template_sha256=runtime.template_sha256,
+    )
+
+
+def _unlink_review_outputs(*paths: Path) -> None:
+    for path in paths:
+        path.unlink(missing_ok=True)

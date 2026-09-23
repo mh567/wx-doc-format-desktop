@@ -17,6 +17,22 @@ class NativeRuntimeError(RuntimeError):
 
 PUBLIC_SUMMARY_SCHEMA = "1.0"
 
+_REVIEW_FAILURE_PREFIXES = {
+    "REVIEW_INPUT_UNSUPPORTED": "审查仅支持 .docx 文件。",
+    "REVIEW_FAILED": "无法审查该文档：",
+}
+
+
+def _review_failure(detail: str) -> str:
+    text = detail.strip()
+    for prefix, message in _REVIEW_FAILURE_PREFIXES.items():
+        if text.startswith(prefix):
+            remainder = text[len(prefix):].lstrip(":： ").strip()
+            return f"{message}{remainder}" if message.endswith("：") else message
+    if "unrecognized arguments" in text or "invalid choice" in text:
+        return "当前原生运行时版本不支持审查功能。"
+    return f"原生审查失败：{text}"
+
 
 @dataclass(frozen=True)
 class NativeRuntime:
@@ -133,4 +149,55 @@ class NativeRuntime:
         summary = report.get("public_summary")
         if not isinstance(summary, dict) or summary.get("schema_version") != PUBLIC_SUMMARY_SCHEMA:
             raise NativeRuntimeError("原生转换报告缺少可用的公开摘要。")
+        return report
+
+    def review(
+        self,
+        source: Path,
+        *,
+        report_path: Path,
+        markdown_path: Path | None = None,
+        html_path: Path | None = None,
+    ) -> dict:
+        command = [
+            str(self.executable),
+            "--review",
+            "--input",
+            str(source),
+            "--template",
+            str(self.template),
+            "--report",
+            str(report_path),
+        ]
+        if markdown_path is not None:
+            command.extend(["--report-md", str(markdown_path)])
+        if html_path is not None:
+            command.extend(["--report-html", str(html_path)])
+        try:
+            completed = subprocess.run(
+                command,
+                env=self.environment(),
+                capture_output=True,
+                text=True,
+                timeout=600,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise NativeRuntimeError(f"无法执行原生审查运行时：{exc}") from exc
+        if completed.returncode != 0:
+            detail = completed.stderr.strip() or completed.stdout.strip() or f"退出码 {completed.returncode}"
+            raise NativeRuntimeError(_review_failure(detail))
+        if not report_path.is_file():
+            raise NativeRuntimeError("原生审查未生成报告。")
+        try:
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise NativeRuntimeError("无法读取原生审查报告。") from exc
+        if (
+            not isinstance(report, dict)
+            or not isinstance(report.get("score"), (int, float))
+            or isinstance(report.get("score"), bool)
+            or not isinstance(report.get("dimension_scores"), dict)
+        ):
+            raise NativeRuntimeError("原生审查报告缺少评分数据。")
         return report

@@ -10,21 +10,25 @@
   <div class="shell">
     <header class="topbar">
       <div class="brand-mark" aria-hidden="true">M</div>
-      <div>
+      <div class="brand-text">
         <strong>Magic Format</strong>
-        <span>本地文档转换</span>
+        <span>本地文档处理</span>
       </div>
+      <nav class="tabs" role="tablist" aria-label="功能切换">
+        <button class="tab" id="tabConvert" type="button" role="tab" aria-selected="true" aria-controls="viewConvert">转换</button>
+        <button class="tab" id="tabReview" type="button" role="tab" aria-selected="false" aria-controls="viewReview">审查</button>
+      </nav>
+      <span class="connection" id="connectionStatus">正在检查本地服务</span>
       <button class="quiet-button" id="shutdownButton" type="button">退出程序</button>
     </header>
 
     <main class="workspace">
-      <section class="converter" aria-labelledby="converterTitle">
+      <section class="converter" id="viewConvert" aria-labelledby="converterTitle">
         <div class="section-heading">
           <div>
             <h1 id="converterTitle">转换文档</h1>
             <p>选择文件，完成后下载排版文档和复核报告。</p>
           </div>
-          <span class="connection" id="connectionStatus">正在检查本地服务</span>
         </div>
 
         <label class="dropzone" id="dropzone" for="fileInput">
@@ -44,6 +48,32 @@
           <span>开始转换</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
         </button>
+      </section>
+
+      <section class="reviewer" id="viewReview" hidden aria-labelledby="reviewTitle">
+        <div class="section-heading">
+          <div>
+            <h1 id="reviewTitle">审查文档</h1>
+            <p>上传一份 .docx，按模板打分并给出问题清单与整改建议。</p>
+          </div>
+        </div>
+
+        <label class="dropzone review-dropzone" id="reviewDropzone" for="reviewInput">
+          <input id="reviewInput" type="file" accept=".docx">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
+          <strong>拖放文件到这里</strong>
+          <span>或点击选择一份文档</span>
+        </label>
+        <p class="format-note">支持 .docx 单文件，最大 100 MB</p>
+        <p class="review-selection" id="reviewSelection" hidden></p>
+        <p class="review-error" id="reviewError" hidden></p>
+
+        <button class="primary-button" id="reviewButton" type="button" disabled>
+          <span>开始审查</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+        </button>
+
+        <div class="review-result" id="reviewResult" hidden></div>
       </section>
     </main>
 

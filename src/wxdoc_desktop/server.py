@@ -18,7 +18,14 @@ from . import __version__
 from .environment import environment_report, open_default_browser
 from .instance import InstanceLock, RuntimeDescriptor, remove_descriptor, write_descriptor
 from .resources import static_text
-from .service import MAX_INPUT_BYTES, ConversionError, ConversionRequest, convert_document
+from .service import (
+    MAX_INPUT_BYTES,
+    ConversionError,
+    ConversionRequest,
+    ReviewRequest,
+    convert_document,
+    review_document,
+)
 
 
 class ApplicationState:
@@ -219,10 +226,12 @@ class Handler(BaseHTTPRequestHandler):
             self.state.touch(client_id)
             self._json({"ok": True})
             return
+        if path == "/api/review":
+            self._handle_review()
+            return
         if path != "/api/convert":
             self.send_error(HTTPStatus.NOT_FOUND)
             return
-
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
@@ -271,6 +280,69 @@ class Handler(BaseHTTPRequestHandler):
                     "document": f"/download/{job_token}/document",
                     "report": f"/download/{job_token}/report",
                     "details": f"/download/{job_token}/details",
+                },
+            }
+        )
+
+    def _handle_review(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0 or length > MAX_INPUT_BYTES:
+            self._json({"ok": False, "message": "文件为空或超过 100 MB 限制。"}, 400)
+            return
+
+        encoded_name = self.headers.get("X-WX-Filename", "")
+        filename = Path(urllib.parse.unquote(encoded_name)).name
+        if Path(filename).suffix.lower() != ".docx":
+            self._json({"ok": False, "message": "审查仅支持 .docx 文件。"}, 400)
+            return
+
+        job_token = secrets.token_urlsafe(18)
+        job_dir = self.state.root / job_token
+        job_dir.mkdir(mode=0o700)
+        source = job_dir / "source.docx"
+        source.write_bytes(self.rfile.read(length))
+        stem = Path(filename).stem
+        report_json = job_dir / f"{stem}_审查报告.json"
+        report_markdown = job_dir / f"{stem}_审查报告.md"
+        report_html = job_dir / f"{stem}_审查报告.html"
+        with self.state.conversion():
+            try:
+                result = review_document(
+                    ReviewRequest(source, report_json, report_markdown, report_html, display_name=filename)
+                )
+            except (ConversionError, OSError, ValueError) as exc:
+                self._json({"ok": False, "message": str(exc)}, 422)
+                return
+            except Exception:
+                self._json({"ok": False, "message": "审查过程遇到未预期问题，请导出环境报告。"}, 500)
+                return
+
+        with self.state.lock:
+            self.state.artifacts[(job_token, "details")] = result.report_path
+            self.state.artifacts[(job_token, "markdown")] = result.markdown_path
+            self.state.artifacts[(job_token, "report")] = result.html_path
+        self._json(
+            {
+                "ok": True,
+                "status": "completed",
+                "filename": filename,
+                "score": result.score,
+                "grade": result.grade,
+                "passed": result.passed,
+                "dimension_scores": result.dimension_scores,
+                "summary": result.summary,
+                "issues": [dict(item) for item in result.issues],
+                "compliant_items": list(result.compliant_items),
+                "risk_warnings": list(result.risk_warnings),
+                "warning_count": len(result.risk_warnings),
+                "job": job_token,
+                "downloads": {
+                    "details": f"/download/{job_token}/details",
+                    "markdown": f"/download/{job_token}/markdown",
+                    "report": f"/download/{job_token}/report",
                 },
             }
         )
