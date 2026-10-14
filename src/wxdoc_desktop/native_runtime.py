@@ -12,7 +12,9 @@ from . import __version__
 
 
 class NativeRuntimeError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, report: dict | None = None):
+        super().__init__(message)
+        self.report = report
 
 
 PUBLIC_SUMMARY_SCHEMA = "1.0"
@@ -32,6 +34,14 @@ def _review_failure(detail: str) -> str:
     if "unrecognized arguments" in text or "invalid choice" in text:
         return "当前原生运行时版本不支持审查功能。"
     return f"原生审查失败：{text}"
+
+
+def _read_report_if_available(path: Path) -> dict | None:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
 
 
 @dataclass(frozen=True)
@@ -124,6 +134,8 @@ class NativeRuntime:
             str(self.template),
             "--report",
             str(report_path),
+            "--delivery-policy",
+            "desktop",
             "--strict-normalize" if strict_normalize else "--no-strict-normalize",
         ]
         try:
@@ -139,16 +151,32 @@ class NativeRuntime:
             raise NativeRuntimeError(f"无法执行原生转换运行时：{exc}") from exc
         if completed.returncode != 0:
             detail = completed.stderr.strip() or completed.stdout.strip() or f"退出码 {completed.returncode}"
-            raise NativeRuntimeError(f"原生转换失败：{detail}")
+            raise NativeRuntimeError(f"原生转换失败：{detail}", report=_read_report_if_available(report_path))
         if not output.is_file() or not report_path.is_file():
-            raise NativeRuntimeError("原生转换未生成完整的文档和报告。")
+            raise NativeRuntimeError(
+                "原生转换未生成完整的文档和报告。",
+                report=_read_report_if_available(report_path),
+            )
         try:
             report = json.loads(report_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             raise NativeRuntimeError("无法读取原生转换报告。") from exc
+        if not isinstance(report, dict):
+            fallback = {
+                "status": "completed_with_warnings",
+                "public_summary": {
+                    "schema_version": PUBLIC_SUMMARY_SCHEMA,
+                    "conversion_status": "completed",
+                    "audit_status": "incomplete",
+                    "delivery_status": "blocked",
+                    "audit_findings": [],
+                    "diagnostic_codes": ["invalid_public_report"],
+                },
+            }
+            raise NativeRuntimeError("原生转换报告结构无效。", report=fallback)
         summary = report.get("public_summary")
         if not isinstance(summary, dict) or summary.get("schema_version") != PUBLIC_SUMMARY_SCHEMA:
-            raise NativeRuntimeError("原生转换报告缺少可用的公开摘要。")
+            raise NativeRuntimeError("原生转换报告缺少可用的公开摘要。", report=report)
         return report
 
     def review(

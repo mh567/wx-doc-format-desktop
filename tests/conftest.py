@@ -91,6 +91,7 @@ def native_skill_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
         "parser.add_argument('--output')\n"
         "parser.add_argument('--template')\n"
         "parser.add_argument('--report')\n"
+        "parser.add_argument('--delivery-policy', choices=['strict', 'desktop'], default='strict')\n"
         "parser.add_argument('--strict-normalize', action='store_true')\n"
         "parser.add_argument('--no-strict-normalize', action='store_true')\n"
         "parser.add_argument('--review', action='store_true')\n"
@@ -109,8 +110,12 @@ def native_skill_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
         "    if args.report_html:\n"
         "        open(args.report_html, 'w', encoding='utf-8').write('<html lang=\"zh-CN\"></html>')\n"
         "else:\n"
+        "    assert args.delivery_policy == 'desktop'\n"
         "    shutil.copyfile(args.template, args.output)\n"
         f"    payload = {json.dumps(CONVERT_REPORT)!r}\n"
+        "    converted_report = json.loads(payload)\n"
+        "    converted_report['public_summary']['delivery_policy'] = args.delivery_policy\n"
+        "    payload = json.dumps(converted_report, ensure_ascii=False)\n"
         "    open(args.report, 'w', encoding='utf-8').write(payload)\n",
         encoding="utf-8",
     )
